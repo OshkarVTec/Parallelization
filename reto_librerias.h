@@ -13,6 +13,20 @@
 // David Alberto Alvarado Cabrero
 // Mayo 2025
 
+void create_folder(char path[80])
+{
+     // Create the folder "out" if it does not exist
+     struct stat st = {0};
+     if (stat(path, &st) == -1)
+     {
+#ifdef _WIN32
+          _mkdir(path);
+#else
+          mkdir(path, 0700);
+#endif
+     }
+}
+
 extern void grey_scale_img(char mask[10], char path[80])
 {
      FILE *image, *outputImage; // Transformacion de imagen
@@ -21,12 +35,8 @@ extern void grey_scale_img(char mask[10], char path[80])
      strcat(add_char, ".bmp");
      printf("%s\n", add_char);
 
+     create_folder("./out");
      // Create the folder "out" if it does not exist
-     struct stat st = {0};
-     if (stat("./out", &st) == -1)
-     {
-          mkdir("./out", 0700);
-     }
 
      image = fopen(path, "rb");           // Imagen original a transformar
      outputImage = fopen(add_char, "wb"); // Imagen transformada
@@ -116,12 +126,8 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
      strcat(add_char, ".bmp");
      printf("%s\n", add_char);
 
+     create_folder("./out");
      // Create the folder "out" if it does not exist
-     struct stat st = {0};
-     if (stat("./out", &st) == -1)
-     {
-          mkdir("./out", 0700);
-     }
 
      outputImage = fopen(add_char, "wb"); // Transformed image
      long width, height;
