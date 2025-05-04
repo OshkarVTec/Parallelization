@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 //Tecnologico de Monterrey
 //Campus Puebla
@@ -12,10 +13,17 @@
 
 extern void grey_scale_img(char mask[10], char path[80]){       
      FILE *image, *outputImage; //Transformacion de imagen
-     char add_char[80] = "./img/";
+     char add_char[80] = "./out/";
      strcat(add_char, mask);
      strcat(add_char, ".bmp");
      printf("%s\n", add_char);
+
+     // Create the folder "out" if it does not exist
+     struct stat st = {0};
+     if (stat("./out", &st) == -1) {
+          mkdir("./out", 0700);
+     }
+
      image = fopen(path,"rb");          //Imagen original a transformar
      outputImage = fopen(add_char,"wb");    //Imagen transformada
 
