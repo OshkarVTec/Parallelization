@@ -1,3 +1,8 @@
+#include <omp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 //Tecnologico de Monterrey
 //Campus Puebla
 //Oskar Adolfo Villa Lopez
@@ -6,38 +11,54 @@
 //Mayo 2025
 
 extern void grey_scale_img(char mask[10], char path[80]){       
-    FILE *image, *outputImage, *lecturas, *fptr; //Transformacion de imagen
-    char add_char[80] = "./img/";
-    strcat(add_char, mask);
-    strcat(add_char, ".bmp");
-    printf("%s\n", add_char);
-    image = fopen(path,"rb");          //Imagen original a transformar
-    outputImage = fopen(add_char,"wb");    //Imagen transformada
+     FILE *image, *outputImage; //Transformacion de imagen
+     char add_char[80] = "./img/";
+     strcat(add_char, mask);
+     strcat(add_char, ".bmp");
+     printf("%s\n", add_char);
+     image = fopen(path,"rb");          //Imagen original a transformar
+     outputImage = fopen(add_char,"wb");    //Imagen transformada
 
-    unsigned char r, g, b;               //Pixel
-    
-    int i;
-    for(i=0; i<54; i++) fputc(fgetc(image), outputImage);   //Copia cabecera a nueva imagen
-    while(!feof(image)){                                        //Grises
-       b = fgetc(image);
-       g = fgetc(image);
-       r = fgetc(image);
+     if (image == NULL || outputImage == NULL) {
+          perror("Error opening file");
+          return;
+     }
 
-       if(r <= 0.80 && g <= 0.80 && b <= 0.80)
-       {
-            fputc(205, outputImage);
-            fputc(205, outputImage);
-            fputc(205, outputImage);
-       }
-       else 
-       {
-            unsigned char pixel = 0.21*r+0.72*g+0.07*b;
-            fputc(pixel, outputImage);
-            fputc(pixel, outputImage);
-            fputc(pixel, outputImage);
-       }
-    }
+     unsigned char header[54]; // BMP header
+     fread(header, sizeof(unsigned char), 54, image); // Read header
+     fwrite(header, sizeof(unsigned char), 54, outputImage); // Write header
 
-    fclose(image);
-    fclose(outputImage);
+     int width = *(int*)&header[18];
+     int height = *(int*)&header[22];
+     int padding = (4 - (width * 3) % 4) % 4;
+
+     unsigned char *pixelData = malloc((width * 3 + padding) * height);
+     fread(pixelData, sizeof(unsigned char), (width * 3 + padding) * height, image);
+
+     #pragma omp parallel for
+     for (int i = 0; i < height; i++) {
+          for (int j = 0; j < width * 3; j += 3) {
+               int index = i * (width * 3 + padding) + j;
+               unsigned char b = pixelData[index];
+               unsigned char g = pixelData[index + 1];
+               unsigned char r = pixelData[index + 2];
+
+               if (r <= 0.80 && g <= 0.80 && b <= 0.80) {
+                    pixelData[index] = 205;
+                    pixelData[index + 1] = 205;
+                    pixelData[index + 2] = 205;
+               } else {
+                    unsigned char pixel = 0.21 * r + 0.72 * g + 0.07 * b;
+                    pixelData[index] = pixel;
+                    pixelData[index + 1] = pixel;
+                    pixelData[index + 2] = pixel;
+               }
+          }
+     }
+
+     fwrite(pixelData, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
+
+     free(pixelData);
+     fclose(image);
+     fclose(outputImage);
 }
