@@ -19,8 +19,8 @@ int NUM_THREADS = 4; // Number of threads
 int main()
 {
     omp_set_num_threads(NUM_THREADS);
-    grey_scale_img("greyscale_1", "./img/sample1.bmp");
-    blur_img("blur_1", "./img/sample1.bmp", 55);
+    grey_scale_img("greyscale_1", "./img/Image01.bmp");
+    blur_img("blur_1", "./img/Image01.bmp", 55);
 #pragma omp parallel
     {
 #pragma omp single
