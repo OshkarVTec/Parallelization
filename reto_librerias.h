@@ -204,10 +204,12 @@ extern int blur_img(char mask[10], char path[80], int kernelSize)
           for (int p = 0; p < padding; p++)
           {
                arr_blurred[i * (width * 3 + padding) + width * 3 + p] = 0;
+               operations++;
           }
      }
 
      fwrite(arr_blurred, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
+     operations += (width * 3 + padding) * height;
 
      free(arr_original);
      free(arr_blurred);
