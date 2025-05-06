@@ -94,6 +94,7 @@ int find_optimal_threads()
 
 int main()
 {
+
     int kernel_size;
     do
     {
