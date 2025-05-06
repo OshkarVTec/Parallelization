@@ -22,7 +22,7 @@ int main()
     grey_scale_img("greyscale_1", "./img/sample1.bmp");
     blur_img("blur_1", "./img/sample1.bmp", 55);
     horizontal_mirror_color_img("mirrorHorizontal_1", "./img/sample1.bmp");
-    vertical_mirror_color_img("mirrorVertical_2", "./img/sample1.bmp");
+    vertical_mirror_color_img("mirrorVertical_1", "./img/sample1.bmp");
 #pragma omp parallel
     {
 #pragma omp single
