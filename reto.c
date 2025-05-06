@@ -14,7 +14,7 @@
 #include <math.h>
 #include "reto_librerias.h"
 
-void process_all_images()
+void process_all_images(int kernel_size)
 {
     char *img_folder = "./img/";
     char command[256];
@@ -48,14 +48,14 @@ void process_all_images()
             *dot = '\0'; // Terminate the string before the extension
         }
 
-        snprintf(greyscale_output, sizeof(greyscale_output), "greyscale_%s", filename);
-        snprintf(blur_output, sizeof(blur_output), "blur_%s", filename);
-        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "mirrorHorizontal_%s", filename);
-        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "mirrorVertical_%s", filename);
+        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale", filename);
+        snprintf(blur_output, sizeof(blur_output), "%s_blur", filename);
+        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal", filename);
+        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical", filename);
 
         // Process the image
         grey_scale_img(greyscale_output, filepath);
-        blur_img(blur_output, filepath, 55);
+        blur_img(blur_output, filepath, kernel_size);
         horizontal_mirror_color_img(mirror_horizontal_output, filepath);
         vertical_mirror_color_img(mirror_vertical_output, filepath);
     }
@@ -89,14 +89,24 @@ int find_optimal_threads()
 
 int main()
 {
+    int kernel_size;
+    do
+    {
+        printf("Enter the kernel size for blurring (55 to 150): ");
+        scanf("%d", &kernel_size);
+        if (kernel_size < 55 || kernel_size > 155)
+        {
+            printf("Invalid kernel size. Please enter a value between 55 and 150.\n");
+        }
+    } while (kernel_size < 55 || kernel_size > 150);
     /*     grey_scale_img("greyscale_1", "./img/Image01.bmp");
-        blur_img("blur_1", "./img/Image01.bmp", 55);
+        blur_img("blur_1", "./img/Image01.bmp", kernel_size);
         horizontal_mirror_color_img("mirrorHorizontal_1", "./img/Image01.bmp");
         vertical_mirror_color_img("mirrorVertical_1", "./img/Image01.bmp"); */
     int optimal_threads = find_optimal_threads();
     printf("Optimal number of threads: %d\n", optimal_threads);
     omp_set_num_threads(optimal_threads);
-    process_all_images();
+    process_all_images(kernel_size);
 #pragma omp parallel
     {
 #pragma omp single
