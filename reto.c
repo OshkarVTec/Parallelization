@@ -30,6 +30,8 @@ void process_all_images(int kernel_size)
     }
 
     char filename[128];
+    double start_time = omp_get_wtime(); // Start timing
+
     while (fgets(filename, sizeof(filename), fp) != NULL)
     {
         // Remove newline character from filename
@@ -59,6 +61,9 @@ void process_all_images(int kernel_size)
         horizontal_mirror_color_img(mirror_horizontal_output, filepath);
         vertical_mirror_color_img(mirror_vertical_output, filepath);
     }
+
+    double end_time = omp_get_wtime(); // End timing
+    printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
 
     pclose(fp);
 }
