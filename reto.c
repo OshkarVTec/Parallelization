@@ -70,16 +70,16 @@ void process_all_images(int kernel_size)
 
 int find_optimal_threads()
 {
-    int max_threads = omp_get_max_threads();
+    int max_threads = 100;
     int optimal_threads = 1;
     double min_time = INFINITY;
 
-    for (int num_threads = 1; num_threads <= max_threads; num_threads++)
+    for (int num_threads = 1; num_threads <= max_threads; num_threads += 2)
     {
         omp_set_num_threads(num_threads);
 
         double start_time = omp_get_wtime();
-        grey_scale_img("test_greyscale", "./img/Image01.bmp");
+        grey_scale_img("test_greyscale", "./img/Image03.bmp");
         double end_time = omp_get_wtime();
         double elapsed_time = end_time - start_time;
         if (elapsed_time < min_time)
