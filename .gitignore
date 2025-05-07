@@ -4,3 +4,6 @@
 
 # Ignore the out/ folder
 out/
+
+# Ignore the vscode config folder
+.vscode/
