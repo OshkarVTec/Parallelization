@@ -19,6 +19,7 @@ void process_all_images(int kernel_size)
     char *img_folder = "./img/";
     char command[256];
     FILE *fp;
+    FILE *operations_count;
 
     // Use a system command to list all files in the img folder
     snprintf(command, sizeof(command), "ls %s", img_folder);
@@ -26,6 +27,15 @@ void process_all_images(int kernel_size)
     if (fp == NULL)
     {
         perror("Failed to list images");
+        exit(EXIT_FAILURE);
+    }
+
+    // Open the operations_count file to write the number of operations
+    operations_count = fopen("operations_count.txt", "w");
+    if (operations_count == NULL)
+    {
+        perror("Failed to open operations_count.txt");
+        pclose(fp);
         exit(EXIT_FAILURE);
     }
 
@@ -41,7 +51,7 @@ void process_all_images(int kernel_size)
         snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);
 
         // Generate output filenames based on the original filename
-        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256], mirror_vertical_output[256];
+        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256], mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
 
         // Remove the .bmp extension from the filename
         char *dot = strrchr(filename, '.');
@@ -50,21 +60,37 @@ void process_all_images(int kernel_size)
             *dot = '\0'; // Terminate the string before the extension
         }
 
+        // Count the total number of pixels (locations) read from the original image
+        int width, height;
+        get_image_dimensions(filepath, &width, &height);
+        int total_pixels_read = width * height * 6 * 3;
+        int total_pixels_written = total_pixels_read;
+
+        // Write the counts to the operations_count file
+        fprintf(operations_count, "File: %s\n", filename);
+        fprintf(operations_count, "Total pixels read: %d\n", total_pixels_read);
+        fprintf(operations_count, "Total pixels written: %d\n\n", total_pixels_written);
+
+        // Generate output filenames
         snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale", filename);
         snprintf(blur_output, sizeof(blur_output), "%s_blur", filename);
         snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal", filename);
         snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical", filename);
+        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW", filename);
+        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW", filename);
 
         // Process the image
         grey_scale_img(greyscale_output, filepath);
-        blur_img(blur_output, filepath, kernel_size);
+        // blur_img(blur_output, filepath, kernel_size);
         horizontal_mirror_color_img(mirror_horizontal_output, filepath);
         vertical_mirror_color_img(mirror_vertical_output, filepath);
+        horizontal_mirror_bw_img(mirror_horizontal_bw_output, filepath);
+        vertical_mirror_bw_img(mirror_vertical_bw_output, filepath);
     }
 
     double end_time = omp_get_wtime(); // End timing
     printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
-
+    fclose(operations_count);
     pclose(fp);
 }
 
