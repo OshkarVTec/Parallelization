@@ -27,7 +27,7 @@ void create_folder(char path[80])
      }
 }
 
-extern int grey_scale_img(char mask[10], char path[80])
+extern void grey_scale_img(char mask[10], char path[80])
 {
      FILE *image, *outputImage; // Transformacion de imagen
      char add_char[80] = "./out/";
@@ -44,7 +44,7 @@ extern int grey_scale_img(char mask[10], char path[80])
      if (image == NULL || outputImage == NULL)
      {
           perror("Error opening file");
-          return;
+          return -1;
      }
 
      unsigned char header[54];                               // BMP header
@@ -57,8 +57,6 @@ extern int grey_scale_img(char mask[10], char path[80])
 
      unsigned char *pixelData = malloc((width * 3 + padding) * height);
      fread(pixelData, sizeof(unsigned char), (width * 3 + padding) * height, image);
-
-     int operations = 0;
 
 #pragma omp parallel for
      for (int i = 0; i < height; i++)
@@ -75,7 +73,6 @@ extern int grey_scale_img(char mask[10], char path[80])
                     pixelData[index] = 205;
                     pixelData[index + 1] = 205;
                     pixelData[index + 2] = 205;
-                    operations += 3;
                }
                else
                {
@@ -83,19 +80,16 @@ extern int grey_scale_img(char mask[10], char path[80])
                     pixelData[index] = pixel;
                     pixelData[index + 1] = pixel;
                     pixelData[index + 2] = pixel;
-                    operations += 3;
                }
           }
      }
 
      fwrite(pixelData, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
-     operations += (width * 3 + padding) * height;
 
      free(pixelData);
      fclose(image);
      fclose(outputImage);
-
-     return operations;
+     return 0;
 }
 
 int matrixBlurring(unsigned char *image, long width, long height, int kernelSize, int position, int padding)
@@ -124,7 +118,7 @@ int matrixBlurring(unsigned char *image, long width, long height, int kernelSize
      return mean;
 }
 
-extern int blur_img(char mask[10], char path[80], int kernelSize)
+extern void blur_img(char mask[10], char path[80], int kernelSize)
 {
      FILE *inputImage, *outputImage;
      inputImage = fopen(path, "rb"); // Original image to transform
@@ -147,8 +141,6 @@ extern int blur_img(char mask[10], char path[80], int kernelSize)
      width = *(int *)&header[18];
      height = *(int *)&header[22];
      padding = (4 - (width * 3) % 4) % 4;
-
-     int operations = 0;
 
      unsigned char *arr_original = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
      unsigned char *arr_blurred = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
@@ -172,7 +164,6 @@ extern int blur_img(char mask[10], char path[80], int kernelSize)
                originalBlue[j] = arr_original[index];
                originalGreen[j] = arr_original[index + 1];
                originalRed[j] = arr_original[index + 2];
-               operations += 3;
           }
      }
 
@@ -184,7 +175,6 @@ extern int blur_img(char mask[10], char path[80], int kernelSize)
                blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i, padding);
                blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i, padding);
                blurredGreen[i] = matrixBlurring(originalGreen, width, height, kernelSize, i, padding);
-               operations += 3 * kernelSize * kernelSize;
           }
      }
 
@@ -198,18 +188,15 @@ extern int blur_img(char mask[10], char path[80], int kernelSize)
                arr_blurred[index + 1] = blurredGreen[j];
                arr_blurred[index + 2] = blurredRed[j];
                j++;
-               operations += 3;
           }
           // Add padding bytes
           for (int p = 0; p < padding; p++)
           {
                arr_blurred[i * (width * 3 + padding) + width * 3 + p] = 0;
-               operations++;
           }
      }
 
      fwrite(arr_blurred, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
-     operations += (width * 3 + padding) * height;
 
      free(arr_original);
      free(arr_blurred);
@@ -223,10 +210,10 @@ extern int blur_img(char mask[10], char path[80], int kernelSize)
      fclose(inputImage);
      fclose(outputImage);
 
-     return operations;
+     return 0;
 }
 
-extern int horizontal_mirror_color_img(char mask[10], char path[80])
+extern void horizontal_mirror_color_img(char mask[10], char path[80])
 {
      FILE *inputImage, *outputImage;
      inputImage = fopen(path, "rb"); // Original image to transform
@@ -264,8 +251,6 @@ extern int horizontal_mirror_color_img(char mask[10], char path[80])
      }
 
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
-
-     int operations = 0;
 
      // Aplicamos el efecto espejo horizontal paralelizado
 #pragma omp parallel for
@@ -280,31 +265,26 @@ extern int horizontal_mirror_color_img(char mask[10], char path[80])
                arr_mirrored[dst_idx] = arr_original[src_idx];
                arr_mirrored[dst_idx + 1] = arr_original[src_idx + 1];
                arr_mirrored[dst_idx + 2] = arr_original[src_idx + 2];
-               operations += 3;
           }
 
           // Copiamos el padding tal cual
           for (int k = 0; k < padding; k++)
           {
                arr_mirrored[i * (width * 3 + padding) + width * 3 + k] = arr_original[i * (width * 3 + padding) + width * 3 + k];
-               operations++;
           }
      }
 
      // Escribimos la imagen resultante
      fwrite(arr_mirrored, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
-     operations += (width * 3 + padding) * height;
 
      // Liberamos recursos
      fclose(inputImage);
      fclose(outputImage);
      free(arr_original);
      free(arr_mirrored);
-
-     return operations;
 }
 
-extern int vertical_mirror_color_img(char mask[10], char path[80])
+extern void vertical_mirror_color_img(char mask[10], char path[80])
 {
      FILE *inputImage, *outputImage;
      inputImage = fopen(path, "rb"); // Original image to transform
@@ -343,8 +323,6 @@ extern int vertical_mirror_color_img(char mask[10], char path[80])
 
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
 
-     int operations = 0;
-
 // Aplicamos el efecto espejo horizontal paralelizado
 #pragma omp parallel for
      for (int i = 0; i < height; i++)
@@ -356,65 +334,68 @@ extern int vertical_mirror_color_img(char mask[10], char path[80])
           for (int j = 0; j < (width * 3 + padding); j++)
           {
                arr_mirrored[dst_row_idx + j] = arr_original[src_row_idx + j];
-               operations++;
           }
      }
 
      // Escribimos la imagen resultante
      fwrite(arr_mirrored, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
-     operations += (width * 3 + padding) * height;
 
      // Liberamos recursos
      fclose(inputImage);
      fclose(outputImage);
      free(arr_original);
      free(arr_mirrored);
- }
+     return;
+}
 
- extern void horizontal_mirror_bw_img(char mask[10], char path[80]) {
+extern void horizontal_mirror_bw_img(char mask[10], char path[80])
+{
      FILE *inputImage, *outputImage;
      inputImage = fopen(path, "rb"); // Original image to transform
      char add_char[80] = "./out/";
      strcat(add_char, mask);
      strcat(add_char, ".bmp");
      printf("%s\n", add_char);
- 
+
      create_folder("./out");
      // Create the folder "out" if it does not exist
- 
+
      outputImage = fopen(add_char, "wb"); // Transformed image
      long width, height;
      int padding;
- 
+
      unsigned char header[54];
      fread(header, sizeof(unsigned char), 54, inputImage);   // Read BMP header
      fwrite(header, sizeof(unsigned char), 54, outputImage); // Write BMP header
- 
+
      width = *(int *)&header[18];
      height = *(int *)&header[22];
      padding = (4 - (width * 3) % 4) % 4;
- 
+
      unsigned char *arr_original = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
      unsigned char *arr_mirrored = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
- 
-     if (!arr_original || !arr_mirrored) {
-         perror("Memory allocation failed");
-         fclose(inputImage);
-         fclose(outputImage);
-         free(arr_original);
-         free(arr_mirrored);
-         return;
+
+     if (!arr_original || !arr_mirrored)
+     {
+          perror("Memory allocation failed");
+          fclose(inputImage);
+          fclose(outputImage);
+          free(arr_original);
+          free(arr_mirrored);
+          return;
      }
- 
+
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
- 
+
      // Aplicamos el efecto espejo horizontal paralelizado
- #pragma omp parallel for
-     for (int i = 0; i < height; i++) {
-         for (int j = 0; j < width; j++) {
-             int src_idx = i * (width * 3 + padding) + j * 3;
-             int dst_idx = i * (width * 3 + padding) + (width - 1 - j) * 3;
- 
+#pragma omp parallel for
+     for (int i = 0; i < height; i++)
+     {
+          for (int j = 0; j < width; j++)
+          {
+               int src_idx = i * (width * 3 + padding) + j * 3;
+               int dst_idx = i * (width * 3 + padding) + (width - 1 - j) * 3;
+
                unsigned char b = arr_original[src_idx];
                unsigned char g = arr_original[src_idx + 1];
                unsigned char r = arr_original[src_idx + 2];
@@ -426,97 +407,104 @@ extern int vertical_mirror_color_img(char mask[10], char path[80])
                arr_mirrored[dst_idx] = grayscale;
                arr_mirrored[dst_idx + 1] = grayscale;
                arr_mirrored[dst_idx + 2] = grayscale;
-         }
- 
-         // Copiamos el padding tal cual
-         for (int k = 0; k < padding; k++) {
-             arr_mirrored[i * (width * 3 + padding) + width * 3 + k] = arr_original[i * (width * 3 + padding) + width * 3 + k];
-         }
+          }
+
+          // Copiamos el padding tal cual
+          for (int k = 0; k < padding; k++)
+          {
+               arr_mirrored[i * (width * 3 + padding) + width * 3 + k] = arr_original[i * (width * 3 + padding) + width * 3 + k];
+          }
      }
- 
+
      // Escribimos la imagen resultante
      fwrite(arr_mirrored, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
- 
+
      // Liberamos recursos
      fclose(inputImage);
      fclose(outputImage);
      free(arr_original);
      free(arr_mirrored);
- }
- extern void vertical_mirror_bw_img(char mask[10], char path[80]) {
+}
+
+extern void vertical_mirror_bw_img(char mask[10], char path[80])
+{
      FILE *inputImage, *outputImage;
      inputImage = fopen(path, "rb"); // Original image to transform
      char add_char[80] = "./out/";
      strcat(add_char, mask);
      strcat(add_char, ".bmp");
      printf("%s\n", add_char);
- 
+
      create_folder("./out");
      // Create the folder "out" if it does not exist
- 
+
      outputImage = fopen(add_char, "wb"); // Transformed image
      long width, height;
      int padding;
- 
+
      unsigned char header[54];
      fread(header, sizeof(unsigned char), 54, inputImage);   // Read BMP header
      fwrite(header, sizeof(unsigned char), 54, outputImage); // Write BMP header
- 
+
      width = *(int *)&header[18];
      height = *(int *)&header[22];
      padding = (4 - (width * 3) % 4) % 4;
- 
+
      unsigned char *arr_original = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
      unsigned char *arr_mirrored = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
- 
-     if (!arr_original || !arr_mirrored) {
-         perror("Memory allocation failed");
-         fclose(inputImage);
-         fclose(outputImage);
-         free(arr_original);
-         free(arr_mirrored);
-         return;
+
+     if (!arr_original || !arr_mirrored)
+     {
+          perror("Memory allocation failed");
+          fclose(inputImage);
+          fclose(outputImage);
+          free(arr_original);
+          free(arr_mirrored);
+          return;
      }
- 
+
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
- 
-     // Aplicamos el efecto espejo horizontal paralelizado
-     #pragma omp parallel for
-     for (int i = 0; i < height; i++) {
-         int src_row_idx = i * (width * 3 + padding);
-         int dst_row_idx = (height - 1 - i) * (width * 3 + padding);
-     
-         // Convertimos a escala de grises y espejamos la fila completa
-         for (int j = 0; j < width; j++) {
-             int src_idx = src_row_idx + j * 3;
-             int dst_idx = dst_row_idx + j * 3;
-     
-             // Extraemos los valores BGR del píxel original
-             unsigned char b = arr_original[src_idx];
-             unsigned char g = arr_original[src_idx + 1];
-             unsigned char r = arr_original[src_idx + 2];
-     
-             // Calculamos el valor en escala de grises usando la fórmula de luminosidad
-             unsigned char grayscale = (unsigned char)(0.21 * r + 0.72 * g + 0.07 * b);
-     
-             // Asignamos el valor en escala de grises a los tres canales del píxel espejado
-             arr_mirrored[dst_idx] = grayscale;
-             arr_mirrored[dst_idx + 1] = grayscale;
-             arr_mirrored[dst_idx + 2] = grayscale;
-         }
-     
-         // Copiamos el padding tal cual
-         for (int k = 0; k < padding; k++) {
-             arr_mirrored[dst_row_idx + width * 3 + k] = arr_original[src_row_idx + width * 3 + k];
-         }
+
+// Aplicamos el efecto espejo horizontal paralelizado
+#pragma omp parallel for
+     for (int i = 0; i < height; i++)
+     {
+          int src_row_idx = i * (width * 3 + padding);
+          int dst_row_idx = (height - 1 - i) * (width * 3 + padding);
+
+          // Convertimos a escala de grises y espejamos la fila completa
+          for (int j = 0; j < width; j++)
+          {
+               int src_idx = src_row_idx + j * 3;
+               int dst_idx = dst_row_idx + j * 3;
+
+               // Extraemos los valores BGR del píxel original
+               unsigned char b = arr_original[src_idx];
+               unsigned char g = arr_original[src_idx + 1];
+               unsigned char r = arr_original[src_idx + 2];
+
+               // Calculamos el valor en escala de grises usando la fórmula de luminosidad
+               unsigned char grayscale = (unsigned char)(0.21 * r + 0.72 * g + 0.07 * b);
+
+               // Asignamos el valor en escala de grises a los tres canales del píxel espejado
+               arr_mirrored[dst_idx] = grayscale;
+               arr_mirrored[dst_idx + 1] = grayscale;
+               arr_mirrored[dst_idx + 2] = grayscale;
+          }
+
+          // Copiamos el padding tal cual
+          for (int k = 0; k < padding; k++)
+          {
+               arr_mirrored[dst_row_idx + width * 3 + k] = arr_original[src_row_idx + width * 3 + k];
+          }
      }
- 
+
      // Escribimos la imagen resultante
      fwrite(arr_mirrored, sizeof(unsigned char), (width * 3 + padding) * height, outputImage);
- 
+
      // Liberamos recursos
      fclose(inputImage);
      fclose(outputImage);
      free(arr_original);
      free(arr_mirrored);
- }
+}
