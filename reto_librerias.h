@@ -13,6 +13,25 @@
 // David Alberto Alvarado Cabrero
 // Mayo 2025
 
+void get_image_dimensions(const char *filename, int *width, int *height)
+{
+     FILE *file = fopen(filename, "rb");
+     if (file == NULL)
+     {
+          perror("Error opening file");
+          return;
+     }
+
+     unsigned char header[54];
+     fread(header, sizeof(unsigned char), 54, file); // Read the header
+
+     // Extract width and height from the header
+     *width = *(int *)&header[18];
+     *height = *(int *)&header[22];
+
+     fclose(file);
+}
+
 void create_folder(char path[80])
 {
      // Create the folder "out" if it does not exist
