@@ -25,8 +25,13 @@ total_instructions_processed = total_pixels_processed * 20
 # Calculate millions of instructions per second (MIPS)
 mips = (total_instructions_processed / EXECUTION_TIME) / 1_000_000
 
+# Calculate the bytes processed per second
+bytes_per_second = total_pixels_processed / EXECUTION_TIME
+
 # Print the results
 print(f"Total pixels processed: {total_pixels_processed}")
+print(f"Bytes processed per second: {bytes_per_second}")
 print(f"Total instructions processed: {total_instructions_processed}")
 print(f"Execution time (seconds): {EXECUTION_TIME}")
 print(f"Millions of Instructions Per Second (MIPS): {mips}")
+print(f"Bytes per second processed: {bytes_per_second}")
