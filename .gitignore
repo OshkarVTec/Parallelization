@@ -2,6 +2,8 @@
 *.out
 *.exe
 
+operations_count.txt
+
 # Ignore the out/ folder
 out/
 

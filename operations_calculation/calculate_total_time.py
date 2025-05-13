@@ -1,7 +1,7 @@
 EXECUTION_TIME = 11436.78  # Example execution time in seconds
 
 # Open the file operations_count
-file_path = "/home/oskar/Documents/ITC/redes avanzadas/paralelizacion/Parallelization/operations_count.txt"
+file_path = "C:\Users\cruzp\OneDrive\Documentos\ITC\Semestre 8\RedesDeAreAmplia\Parallelization\operations_count.txt"
 
 
 # Initialize counters for total pixels read and written

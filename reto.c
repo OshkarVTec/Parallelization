@@ -16,13 +16,13 @@
 
 void process_all_images(int kernel_size)
 {
-    char *img_folder = "./img/";
+    char *img_folder = "img/";
     char command[256];
     FILE *fp;
     FILE *operations_count;
 
     // Use a system command to list all files in the img folder
-    snprintf(command, sizeof(command), "ls %s", img_folder);
+    snprintf(command, sizeof(command), "dir /b \"%s\"", img_folder);
     fp = popen(command, "r");
     if (fp == NULL)
     {
@@ -51,7 +51,7 @@ void process_all_images(int kernel_size)
         snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);
 
         // Generate output filenames based on the original filename
-        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256], mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
+        char greyscale_output[256], blur_output[256] ,mirror_horizontal_output[256], mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
 
         // Remove the .bmp extension from the filename
         char *dot = strrchr(filename, '.');

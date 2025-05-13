@@ -63,7 +63,7 @@ extern void grey_scale_img(char mask[10], char path[80])
      if (image == NULL || outputImage == NULL)
      {
           perror("Error opening file");
-          return -1;
+          exit(EXIT_FAILURE);
      }
 
      unsigned char header[54];                               // BMP header
@@ -108,33 +108,33 @@ extern void grey_scale_img(char mask[10], char path[80])
      free(pixelData);
      fclose(image);
      fclose(outputImage);
-     return 0;
+     return;
 }
 
-int matrixBlurring(unsigned char *image, long width, long height, int kernelSize, int position, int padding)
+int matrixBlurring(unsigned char *image, long width, long height, int kernelSize, int position)
 {
-     int mean = 0, row = 0, pivot = 0, pixel = 0;
-     int blurringLevel = (kernelSize - 1) / 2; // Calculate blurring level from kernel size
+    int mean = 0;
+    int row = position / width;
+    int col = position % width;
 
-     for (int i = -blurringLevel; i <= blurringLevel; i++)
-     { // Iterate through the rows of the blur matrix
-          pivot = position + i * (width + padding);
-          if (pivot >= 0 && pivot < height * (width + padding))
-          { // Ensure the pivot row is within the image bounds
-               row = pivot / (width + padding);
-               for (int j = -blurringLevel; j <= blurringLevel; j++)
-               { // Iterate through the columns of the blur matrix
-                    pixel = pivot + j;
+    int blurringLevel = (kernelSize - 1) / 2;
+    int count = 0;
 
-                    if (pixel >= row * (width + padding) && pixel < (row + 1) * (width + padding))
-                    { // Ensure the pixel is in the same row as the pivot
-                         mean += image[pixel];
-                    }
-               }
-          }
-     }
-     mean = mean / (kernelSize * kernelSize); // Normalize by the total number of pixels in the kernel
-     return mean;
+    for (int i = -blurringLevel; i <= blurringLevel; i++) {
+        int newRow = row + i;
+        if (newRow < 0 || newRow >= height) continue;
+
+        for (int j = -blurringLevel; j <= blurringLevel; j++) {
+            int newCol = col + j;
+            if (newCol < 0 || newCol >= width) continue;
+
+            int idx = newRow * width + newCol;
+            mean += image[idx];
+            count++;
+        }
+    }
+
+    return mean / count;
 }
 
 extern void blur_img(char mask[10], char path[80], int kernelSize)
@@ -191,9 +191,9 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
 #pragma omp for
           for (int i = 0; i < width * height; i++)
           {
-               blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i, padding);
-               blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i, padding);
-               blurredGreen[i] = matrixBlurring(originalGreen, width, height, kernelSize, i, padding);
+               blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i);
+               blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i);
+               blurredGreen[i] = matrixBlurring(originalGreen, width, height, kernelSize, i);
           }
      }
 
@@ -229,7 +229,7 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
      fclose(inputImage);
      fclose(outputImage);
 
-     return 0;
+     return;
 }
 
 extern void horizontal_mirror_color_img(char mask[10], char path[80])
