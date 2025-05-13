@@ -77,7 +77,6 @@ extern void grey_scale_img(char mask[10], char path[80])
      unsigned char *pixelData = malloc((width * 3 + padding) * height);
      fread(pixelData, sizeof(unsigned char), (width * 3 + padding) * height, image);
 
-#pragma omp parallel for
      for (int i = 0; i < height; i++)
      {
           for (int j = 0; j < width * 3; j += 3)
@@ -186,15 +185,12 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
           }
      }
 
-#pragma omp parallel
-     {
 #pragma omp for
-          for (int i = 0; i < width * height; i++)
-          {
-               blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i, padding);
-               blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i, padding);
-               blurredGreen[i] = matrixBlurring(originalGreen, width, height, kernelSize, i, padding);
-          }
+     for (int i = 0; i < width * height; i++)
+     {
+          blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i, padding);
+          blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i, padding);
+          blurredGreen[i] = matrixBlurring(originalGreen, width, height, kernelSize, i, padding);
      }
 
      int j = 0;
