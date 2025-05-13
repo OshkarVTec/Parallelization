@@ -81,7 +81,7 @@ void process_all_images(int kernel_size)
 
         // Process the image
         grey_scale_img(greyscale_output, filepath);
-        // blur_img(blur_output, filepath, kernel_size);
+        blur_img(blur_output, filepath, kernel_size);
         horizontal_mirror_color_img(mirror_horizontal_output, filepath);
         vertical_mirror_color_img(mirror_vertical_output, filepath);
         horizontal_mirror_bw_img(mirror_horizontal_bw_output, filepath);
