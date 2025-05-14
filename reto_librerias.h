@@ -66,7 +66,7 @@ extern void grey_scale_img(RGB *image, int width, int height, int padding, char 
      FILE *outputImage; // Transformed image
      char add_char[80] = "./out/";
      strcat(add_char, mask);
-     strcat(add_char, ".bmp");
+
      printf("%s\n", add_char);
 
      create_folder("./out");
@@ -83,6 +83,15 @@ extern void grey_scale_img(RGB *image, int width, int height, int padding, char 
      fwrite(&file_header, sizeof(BITMAPFILEHEADER), 1, outputImage);
      fwrite(&info_header, sizeof(BITMAPINFOHEADER), 1, outputImage);
 
+     // Create a temporary array for the grayscale image
+     RGB *grayscale_image = (RGB *)malloc(width * height * sizeof(RGB));
+     if (!grayscale_image)
+     {
+          perror("Memory allocation failed");
+          fclose(outputImage);
+          return;
+     }
+
      // Process each pixel to convert to grayscale
      for (int i = 0; i < height; i++)
      {
@@ -96,73 +105,104 @@ extern void grey_scale_img(RGB *image, int width, int height, int padding, char 
                // Convert to grayscale using luminosity formula
                unsigned char grayscale = (unsigned char)(0.21 * r + 0.72 * g + 0.07 * b);
 
-               // Update the pixel to grayscale
-               image[index].red = grayscale;
-               image[index].green = grayscale;
-               image[index].blue = grayscale;
+               // Update the temporary array with the grayscale value
+               grayscale_image[index].red = grayscale;
+               grayscale_image[index].green = grayscale;
+               grayscale_image[index].blue = grayscale;
           }
      }
 
-     // Write the pixel data to the output file
-     for (int i = 0; i < height; i++)
+     for (int i = height - 1; i >= 0; i--)
      {
-          fwrite(&image[i * width], sizeof(RGB), width, outputImage);
-
-          // Write padding bytes
+          fwrite(&grayscale_image[i * width], sizeof(RGB), width, outputImage);
           for (int p = 0; p < padding; p++)
-          {
                fputc(0, outputImage);
-          }
      }
 
+     free(grayscale_image);
      fclose(outputImage);
 }
 
 void blur_img(RGB *image, int width, int height, int kernel_size, int padding, char mask[10], BITMAPFILEHEADER file_header, BITMAPINFOHEADER info_header)
 {
      int offset = kernel_size / 2;
-     RGB *blurred_image = (RGB *)malloc(width * height * sizeof(RGB));
-     if (!blurred_image)
+     RGB *temp = malloc(width * height * sizeof(RGB));
+     RGB *blurred_image = malloc(width * height * sizeof(RGB));
+     if (!temp || !blurred_image)
      {
           perror("Memory allocation failed");
+          free(temp);
+          free(blurred_image);
           return;
      }
 
+// Horizontal pass
 #pragma omp parallel for
-     for (int y = offset; y < height - offset; y++)
+     for (int y = 0; y < height; y++)
      {
-          for (int x = offset; x < width - offset; x++)
+          for (int x = 0; x < width; x++)
           {
-               int sum_red = 0, sum_green = 0, sum_blue = 0;
-               for (int ky = -offset; ky <= offset; ky++)
+               int sum_r = 0, sum_g = 0, sum_b = 0;
+               int count = 0;
+
+               for (int k = -offset; k <= offset; k++)
                {
-                    for (int kx = -offset; kx <= offset; kx++)
+                    int px = x + k;
+                    if (px >= 0 && px < width)
                     {
-                         int nx = x + kx;
-                         int ny = y + ky;
-                         sum_red += image[ny * width + nx].red;
-                         sum_green += image[ny * width + nx].green;
-                         sum_blue += image[ny * width + nx].blue;
+                         RGB pixel = image[y * width + px];
+                         sum_r += pixel.red;
+                         sum_g += pixel.green;
+                         sum_b += pixel.blue;
+                         count++;
                     }
                }
-               int area = kernel_size * kernel_size;
-               blurred_image[y * width + x].red = sum_red / area;
-               blurred_image[y * width + x].green = sum_green / area;
-               blurred_image[y * width + x].blue = sum_blue / area;
+
+               temp[y * width + x].red = sum_r / count;
+               temp[y * width + x].green = sum_g / count;
+               temp[y * width + x].blue = sum_b / count;
           }
      }
 
-     // Prepare output file
-     FILE *outputImage;
+// Vertical pass
+#pragma omp parallel for
+     for (int y = 0; y < height; y++)
+     {
+          for (int x = 0; x < width; x++)
+          {
+               int sum_r = 0, sum_g = 0, sum_b = 0;
+               int count = 0;
+
+               for (int k = -offset; k <= offset; k++)
+               {
+                    int py = y + k;
+                    if (py >= 0 && py < height)
+                    {
+                         RGB pixel = temp[py * width + x];
+                         sum_r += pixel.red;
+                         sum_g += pixel.green;
+                         sum_b += pixel.blue;
+                         count++;
+                    }
+               }
+
+               blurred_image[y * width + x].red = sum_r / count;
+               blurred_image[y * width + x].green = sum_g / count;
+               blurred_image[y * width + x].blue = sum_b / count;
+          }
+     }
+
+     free(temp);
+
+     // Output
      char add_char[80] = "./out/";
      strcat(add_char, mask);
-     strcat(add_char, ".bmp");
      printf("%s\n", add_char);
 
      create_folder("./out");
 
-     outputImage = fopen(add_char, "wb");
-     if (outputImage == NULL)
+     FILE *outputImage = fopen(add_char, "wb");
+     if (!outputImage)
      {
           perror("Error opening output file");
           free(blurred_image);
@@ -172,19 +212,13 @@ void blur_img(RGB *image, int width, int height, int kernel_size, int padding, c
      fwrite(&file_header, sizeof(BITMAPFILEHEADER), 1, outputImage);
      fwrite(&info_header, sizeof(BITMAPINFOHEADER), 1, outputImage);
 
-     // Write the blurred image data to the output file
-     for (int i = 0; i < height; i++)
+     for (int i = height - 1; i >= 0; i--)
      {
           fwrite(&blurred_image[i * width], sizeof(RGB), width, outputImage);
-
-          // Write padding bytes
           for (int p = 0; p < padding; p++)
-          {
                fputc(0, outputImage);
-          }
      }
 
-     // Free resources and close file
      free(blurred_image);
      fclose(outputImage);
 }
@@ -194,7 +228,7 @@ extern void horizontal_mirror_color_img(RGB *image, int width, int height, int p
      FILE *outputImage; // Imagen transformada
      char add_char[80] = "./out/";
      strcat(add_char, mask);
-     strcat(add_char, ".bmp");
+
      printf("%s\n", add_char);
 
      create_folder("./out");
@@ -234,7 +268,7 @@ extern void horizontal_mirror_color_img(RGB *image, int width, int height, int p
      }
 
      // Escribir los datos de píxeles en el archivo de salida
-     for (int i = 0; i < height; i++)
+     for (int i = height - 1; i >= 0; i--)
      {
           fwrite(&mirrored_image[i * width], sizeof(RGB), width, outputImage);
 
@@ -255,7 +289,7 @@ extern void vertical_mirror_color_img(RGB *image, int width, int height, int pad
      FILE *outputImage; // Imagen transformada
      char add_char[80] = "./out/";
      strcat(add_char, mask);
-     strcat(add_char, ".bmp");
+
      printf("%s\n", add_char);
 
      create_folder("./out");
@@ -295,7 +329,7 @@ extern void vertical_mirror_color_img(RGB *image, int width, int height, int pad
      }
 
      // Escribir los datos de píxeles en el archivo de salida
-     for (int i = 0; i < height; i++)
+     for (int i = height - 1; i >= 0; i--)
      {
           fwrite(&mirrored_image[i * width], sizeof(RGB), width, outputImage);
 
@@ -316,7 +350,7 @@ extern void horizontal_mirror_bw_img(RGB *image, int width, int height, int padd
      FILE *outputImage; // Imagen transformada
      char add_char[80] = "./out/";
      strcat(add_char, mask);
-     strcat(add_char, ".bmp");
+
      printf("%s\n", add_char);
 
      create_folder("./out");
@@ -363,7 +397,7 @@ extern void horizontal_mirror_bw_img(RGB *image, int width, int height, int padd
      }
 
      // Escribir los datos de píxeles en el archivo de salida
-     for (int i = 0; i < height; i++)
+     for (int i = height - 1; i >= 0; i--)
      {
           fwrite(&mirrored_image[i * width], sizeof(RGB), width, outputImage);
 
@@ -384,7 +418,7 @@ extern void vertical_mirror_bw_img(RGB *image, int width, int height, int paddin
      FILE *outputImage; // Imagen transformada
      char add_char[80] = "./out/";
      strcat(add_char, mask);
-     strcat(add_char, ".bmp");
+
      printf("%s\n", add_char);
 
      create_folder("./out");
@@ -431,7 +465,7 @@ extern void vertical_mirror_bw_img(RGB *image, int width, int height, int paddin
      }
 
      // Escribir los datos de píxeles en el archivo de salida
-     for (int i = 0; i < height; i++)
+     for (int i = height - 1; i >= 0; i--)
      {
           fwrite(&mirrored_image[i * width], sizeof(RGB), width, outputImage);
 
