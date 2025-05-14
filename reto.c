@@ -17,7 +17,7 @@
 
 void process_all_images(int kernel_size)
 {
-    char *img_folder = "./img_test/";
+    char *img_folder = "./img/";
     char command[256];
     FILE *fp;
     FILE *operations_count;
