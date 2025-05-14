@@ -112,97 +112,106 @@ extern void grey_scale_img(char mask[10], char path[80])
 
 int matrixBlurring(unsigned char *image, long width, long height, int kernelSize, int position, int padding)
 {
-     int mean = 0, row = 0, pivot = 0, pixel = 0;
-     int blurringLevel = (kernelSize - 1) / 2; // Calculate blurring level from kernel size
+     int mean = 0;
+     int blurringLevel = (kernelSize - 1) / 2; // Half the kernel size
+     int row = position / (width + padding);   // Current row of the position
 
      for (int i = -blurringLevel; i <= blurringLevel; i++)
-     { // Iterate through the rows of the blur matrix
-          pivot = position + i * (width + padding);
-          if (pivot >= 0 && pivot < height * (width + padding))
-          { // Ensure the pivot row is within the image bounds
-               row = pivot / (width + padding);
-               for (int j = -blurringLevel; j <= blurringLevel; j++)
-               { // Iterate through the columns of the blur matrix
-                    pixel = pivot + j;
-
-                    if (pixel >= row * (width + padding) && pixel < (row + 1) * (width + padding))
-                    { // Ensure the pixel is in the same row as the pivot
-                         mean += image[pixel];
+     {
+          int pivot = position + i * (width + padding);
+          if (pivot >= 0 && pivot < height * (width + padding)) // Check bounds
+          {
+               int currentRow = pivot / (width + padding);
+               if (currentRow == row + i) // Ensure pivot is within the correct row
+               {
+                    for (int j = -blurringLevel; j <= blurringLevel; j++)
+                    {
+                         int pixel = pivot + j;
+                         if (pixel >= currentRow * (width + padding) && pixel < (currentRow + 1) * (width + padding))
+                         {
+                              mean += image[pixel];
+                         }
                     }
                }
           }
      }
-     mean = mean / (kernelSize * kernelSize); // Normalize by the total number of pixels in the kernel
-     return mean;
+     return mean / (kernelSize * kernelSize); // Normalize by kernel size
 }
 
 extern void blur_img(char mask[10], char path[80], int kernelSize)
 {
-     FILE *inputImage, *outputImage;
-     inputImage = fopen(path, "rb"); // Original image to transform
+     FILE *inputImage = fopen(path, "rb");
+     if (!inputImage)
+     {
+          perror("Error opening input file");
+          return;
+     }
+
      char add_char[80] = "./out/";
      strcat(add_char, mask);
      strcat(add_char, ".bmp");
-     printf("%s\n", add_char);
-
      create_folder("./out");
-     // Create the folder "out" if it does not exist
 
-     outputImage = fopen(add_char, "wb"); // Transformed image
-     long width, height;
-     int padding;
+     FILE *outputImage = fopen(add_char, "wb");
+     if (!outputImage)
+     {
+          perror("Error opening output file");
+          fclose(inputImage);
+          return;
+     }
 
      unsigned char header[54];
      fread(header, sizeof(unsigned char), 54, inputImage);   // Read BMP header
      fwrite(header, sizeof(unsigned char), 54, outputImage); // Write BMP header
 
-     width = *(int *)&header[18];
-     height = *(int *)&header[22];
-     padding = (4 - (width * 3) % 4) % 4;
+     long width = *(int *)&header[18];
+     long height = *(int *)&header[22];
+     int padding = (4 - (width * 3) % 4) % 4;
 
-     unsigned char *arr_original = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
-     unsigned char *arr_blurred = (unsigned char *)malloc((width * 3 + padding) * height * sizeof(unsigned char));
+     unsigned char *arr_original = (unsigned char *)malloc((width * 3 + padding) * height);
+     unsigned char *arr_blurred = (unsigned char *)malloc((width * 3 + padding) * height);
 
-     unsigned char *originalBlue = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-     unsigned char *originalGreen = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-     unsigned char *originalRed = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-     unsigned char *blurredBlue = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-     unsigned char *blurredGreen = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-     unsigned char *blurredRed = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+     unsigned char *originalBlue = (unsigned char *)malloc(width * height);
+     unsigned char *originalGreen = (unsigned char *)malloc(width * height);
+     unsigned char *originalRed = (unsigned char *)malloc(width * height);
+     unsigned char *blurredBlue = (unsigned char *)malloc(width * height);
+     unsigned char *blurredGreen = (unsigned char *)malloc(width * height);
+     unsigned char *blurredRed = (unsigned char *)malloc(width * height);
 
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
 
+     // Separate color channels
      for (int i = 0; i < height; i++)
      {
           for (int k = 0; k < width * 3; k += 3)
           {
                int index = i * (width * 3 + padding) + k;
-               int j = i * width + k / 3; // Calculate j directly
+               int j = i * width + k / 3;
                originalBlue[j] = arr_original[index];
                originalGreen[j] = arr_original[index + 1];
                originalRed[j] = arr_original[index + 2];
           }
      }
 
+     // Apply blurring to each channel
      for (int i = 0; i < width * height; i++)
      {
           blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i, padding);
-          blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i, padding);
           blurredGreen[i] = matrixBlurring(originalGreen, width, height, kernelSize, i, padding);
+          blurredRed[i] = matrixBlurring(originalRed, width, height, kernelSize, i, padding);
      }
 
-     int j = 0;
+     // Combine blurred channels
      for (int i = 0; i < height; i++)
      {
           for (int k = 0; k < width * 3; k += 3)
           {
                int index = i * (width * 3 + padding) + k;
+               int j = i * width + k / 3;
                arr_blurred[index] = blurredBlue[j];
                arr_blurred[index + 1] = blurredGreen[j];
                arr_blurred[index + 2] = blurredRed[j];
-               j++;
           }
-          // Add padding bytes
           for (int p = 0; p < padding; p++)
           {
                arr_blurred[i * (width * 3 + padding) + width * 3 + p] = 0;
@@ -222,8 +231,6 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
 
      fclose(inputImage);
      fclose(outputImage);
-
-     return 0;
 }
 
 extern void horizontal_mirror_color_img(char mask[10], char path[80])
@@ -434,6 +441,7 @@ extern void horizontal_mirror_bw_img(char mask[10], char path[80])
      fclose(outputImage);
      free(arr_original);
      free(arr_mirrored);
+     return;
 }
 
 extern void vertical_mirror_bw_img(char mask[10], char path[80])
