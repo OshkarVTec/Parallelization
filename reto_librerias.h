@@ -335,8 +335,7 @@ extern void vertical_mirror_color_img(char mask[10], char path[80])
 
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
 
-// Aplicamos el efecto espejo horizontal paralelizado
-#pragma omp parallel for
+     // Aplicamos el efecto espejo horizontal paralelizado
      for (int i = 0; i < height; i++)
      {
           int src_row_idx = i * (width * 3 + padding);
