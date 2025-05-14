@@ -13,15 +13,19 @@
 #include <omp.h>
 #include <math.h>
 #include "reto_librerias.h"
+#include <stdint.h>
+
+#define IMAGE_COUNT 1
 
 void process_all_images(int kernel_size)
 {
-    char *img_folder = "./img/";
+    char *img_folder = "./img_test/";
     char command[256];
     FILE *fp;
     FILE *operations_count;
+    char *filenames[IMAGE_COUNT];
 
-    // Use a system command to list all files in the img folder
+    // Obtener lista de archivos
     snprintf(command, sizeof(command), "ls %s", img_folder);
     fp = popen(command, "r");
     if (fp == NULL)
@@ -30,68 +34,151 @@ void process_all_images(int kernel_size)
         exit(EXIT_FAILURE);
     }
 
-    // Open the operations_count file to write the number of operations
+    // Leer nombres de archivos
+    char filename[128];
+    int i = 0;
+    while (fgets(filename, sizeof(filename), fp) != NULL && i < IMAGE_COUNT)
+    {
+        filename[strcspn(filename, "\n")] = '\0'; // quitar salto de línea
+        filenames[i++] = strdup(filename);        // duplicar el nombre
+    }
+    pclose(fp);
+
+    double start_time = omp_get_wtime();
+
+    // Inicializar archivo (vacío)
     operations_count = fopen("operations_count.txt", "w");
     if (operations_count == NULL)
     {
         perror("Failed to open operations_count.txt");
-        pclose(fp);
         exit(EXIT_FAILURE);
     }
+    fclose(operations_count);
 
-    char filename[128];
-    double start_time = omp_get_wtime(); // Start timing
-
-    while (fgets(filename, sizeof(filename), fp) != NULL)
+// Procesar imágenes en paralelo
+#pragma omp parallel for schedule(dynamic)
+    for (int j = 0; j < IMAGE_COUNT; j++)
     {
-        // Remove newline character from filename
-        filename[strcspn(filename, "\n")] = '\0';
-
+        char *filename = filenames[j];
         char filepath[256];
         snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);
 
-        // Generate output filenames based on the original filename
-        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256], mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
-
-        // Remove the .bmp extension from the filename
-        char *dot = strrchr(filename, '.');
+        // Crear nombres de salida
+        char filename_copy[128];
+        strncpy(filename_copy, filename, sizeof(filename_copy));
+        char *dot = strrchr(filename_copy, '.');
         if (dot && strcmp(dot, ".bmp") == 0)
         {
-            *dot = '\0'; // Terminate the string before the extension
+            *dot = '\0';
         }
 
-        // Count the total number of pixels (locations) read from the original image
-        int width, height;
-        get_image_dimensions(filepath, &width, &height);
-        int total_pixels_read = width * height * 6 * 3;
-        int total_pixels_written = total_pixels_read;
+        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256];
+        char mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
 
-        // Write the counts to the operations_count file
-        fprintf(operations_count, "File: %s\n", filename);
-        fprintf(operations_count, "Total pixels read: %d\n", total_pixels_read);
-        fprintf(operations_count, "Total pixels written: %d\n\n", total_pixels_written);
+        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale.bmp", filename_copy);
+        snprintf(blur_output, sizeof(blur_output), "%s_blur.bmp", filename_copy);
+        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal.bmp", filename_copy);
+        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical.bmp", filename_copy);
+        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW.bmp", filename_copy);
+        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW.bmp", filename_copy);
 
-        // Generate output filenames
-        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale", filename);
-        snprintf(blur_output, sizeof(blur_output), "%s_blur", filename);
-        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal", filename);
-        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical", filename);
-        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW", filename);
-        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW", filename);
+        FILE *file = fopen(filepath, "rb");
+        if (!file)
+        {
+            printf("Error abriendo el archivo BMP\n");
+            continue;
+        }
 
-        // Process the image
-        grey_scale_img(greyscale_output, filepath);
-        blur_img(blur_output, filepath, kernel_size);
-        horizontal_mirror_color_img(mirror_horizontal_output, filepath);
-        vertical_mirror_color_img(mirror_vertical_output, filepath);
-        horizontal_mirror_bw_img(mirror_horizontal_bw_output, filepath);
-        vertical_mirror_bw_img(mirror_vertical_bw_output, filepath);
+        BITMAPFILEHEADER file_header;
+        BITMAPINFOHEADER info_header;
+
+        fread(&file_header, sizeof(BITMAPFILEHEADER), 1, file);
+        fread(&info_header, sizeof(BITMAPINFOHEADER), 1, file);
+
+        // Skip to pixel data
+        fseek(file, file_header.bfOffBits, SEEK_SET);
+
+        int width = info_header.biWidth;
+        int height = info_header.biHeight;
+        int abs_height = abs(height); // to handle top-down bitmaps
+        int row_padded = (width * 3 + 3) & (~3);
+
+        unsigned char *row = malloc(row_padded);
+        RGB *image = malloc(width * abs_height * sizeof(RGB));
+
+        if (info_header.biBitCount != 24 || info_header.biCompression != 0)
+        {
+            printf("Unsupported BMP format: bit count = %d, compression = %u\n",
+                   info_header.biBitCount, info_header.biCompression);
+            fclose(file);
+            free(row);
+            free(image);
+            continue;
+        }
+
+        if (!row || !image)
+        {
+            printf("Memory allocation failed\n");
+            fclose(file);
+            free(row);
+            free(image);
+            continue;
+        }
+
+        for (int i = 0; i < abs_height; i++)
+        {
+            if (fread(row, sizeof(unsigned char), row_padded, file) != row_padded)
+            {
+                printf("Error reading row data\n");
+                fclose(file);
+                free(row);
+                free(image);
+                continue;
+            }
+
+            int row_index = (height > 0) ? (abs_height - 1 - i) : i;
+
+            for (int j = 0; j < width; j++)
+            {
+                int index = row_index * width + j;
+                image[index].blue = row[j * 3];
+                image[index].green = row[j * 3 + 1];
+                image[index].red = row[j * 3 + 2];
+            }
+        }
+
+        free(row);
+
+        int total_pixels_read = width * height * 3; // Total de píxeles leídos
+        int total_pixels_written = width * height * 3 * 6;
+        int padding = (4 - (width * sizeof(RGB)) % 4) % 4; // Calculate padding for BMP format
+
+// Escribir en archivo de conteo
+#pragma omp critical
+        {
+            operations_count = fopen("operations_count.txt", "a");
+            if (operations_count != NULL)
+            {
+                fprintf(operations_count, "File: %s\n", filename_copy);
+                fprintf(operations_count, "Total pixels read: %d\n", total_pixels_read);
+                fprintf(operations_count, "Total pixels written: %d\n\n", total_pixels_written);
+                fclose(operations_count);
+            }
+        }
+
+        // Procesar imagen
+        grey_scale_img(image, width, height, padding, greyscale_output, file_header, info_header);
+        blur_img(image, width, height, kernel_size, padding, blur_output, file_header, info_header);
+        horizontal_mirror_color_img(image, width, height, padding, mirror_horizontal_output, file_header, info_header);
+        vertical_mirror_color_img(image, width, height, padding, mirror_vertical_output, file_header, info_header);
+        horizontal_mirror_bw_img(image, width, height, padding, mirror_horizontal_bw_output, file_header, info_header);
+        vertical_mirror_bw_img(image, width, height, padding, mirror_vertical_bw_output, file_header, info_header);
+
+        free(filenames[j]);
     }
 
-    double end_time = omp_get_wtime(); // End timing
+    double end_time = omp_get_wtime();
     printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
-    fclose(operations_count);
-    pclose(fp);
 }
 
 int find_optimal_threads()
@@ -105,7 +192,14 @@ int find_optimal_threads()
         omp_set_num_threads(num_threads);
 
         double start_time = omp_get_wtime();
-        grey_scale_img("test_greyscale", "./img/Image03.bmp");
+
+// Simulate parallel workload using a dummy loop
+#pragma omp parallel for
+        for (int i = 0; i < 1000000; i++)
+        {
+            double temp = sqrt(i) * sin(i); // Dummy computation
+        }
+
         double end_time = omp_get_wtime();
         double elapsed_time = end_time - start_time;
         if (elapsed_time < min_time)
@@ -135,7 +229,7 @@ int main()
         blur_img("blur_1", "./img/Image01.bmp", kernel_size);
         horizontal_mirror_color_img("mirrorHorizontal_1", "./img/Image01.bmp");
         vertical_mirror_color_img("mirrorVertical_1", "./img/Image01.bmp"); */
-    int optimal_threads = find_optimal_threads();
+    int optimal_threads = 80;
     printf("Optimal number of threads: %d\n", optimal_threads);
     omp_set_num_threads(optimal_threads);
     process_all_images(kernel_size);
