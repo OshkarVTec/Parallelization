@@ -15,15 +15,38 @@
 #include "reto_librerias.h"
 #include <stdint.h>
 
-#define IMAGE_COUNT 1
-
 void process_all_images(int kernel_size)
 {
     char *img_folder = "./img_test/";
     char command[256];
     FILE *fp;
     FILE *operations_count;
-    char *filenames[IMAGE_COUNT];
+    char **filenames = NULL;
+    int IMAGE_COUNT = 0;
+
+    // Obtener lista de archivos y contar el número de imágenes
+    snprintf(command, sizeof(command), "ls %s | wc -l", img_folder);
+    fp = popen(command, "r");
+    if (fp == NULL)
+    {
+        perror("Failed to count images");
+        exit(EXIT_FAILURE);
+    }
+    if (fscanf(fp, "%d", &IMAGE_COUNT) != 1)
+    {
+        perror("Failed to read image count");
+        pclose(fp);
+        exit(EXIT_FAILURE);
+    }
+    pclose(fp);
+
+    // Asignar memoria para los nombres de los archivos
+    filenames = malloc(IMAGE_COUNT * sizeof(char *));
+    if (filenames == NULL)
+    {
+        perror("Memory allocation failed for filenames");
+        exit(EXIT_FAILURE);
+    }
 
     // Obtener lista de archivos
     snprintf(command, sizeof(command), "ls %s", img_folder);
@@ -31,6 +54,7 @@ void process_all_images(int kernel_size)
     if (fp == NULL)
     {
         perror("Failed to list images");
+        free(filenames);
         exit(EXIT_FAILURE);
     }
 
@@ -225,11 +249,8 @@ int main()
             printf("Invalid kernel size. Please enter a value between 55 and 150.\n");
         }
     } while (kernel_size < 55 || kernel_size > 150);
-    /*     grey_scale_img("greyscale_1", "./img/Image01.bmp");
-        blur_img("blur_1", "./img/Image01.bmp", kernel_size);
-        horizontal_mirror_color_img("mirrorHorizontal_1", "./img/Image01.bmp");
-        vertical_mirror_color_img("mirrorVertical_1", "./img/Image01.bmp"); */
-    int optimal_threads = 80;
+
+    int optimal_threads = find_optimal_threads();
     printf("Optimal number of threads: %d\n", optimal_threads);
     omp_set_num_threads(optimal_threads);
     process_all_images(kernel_size);
