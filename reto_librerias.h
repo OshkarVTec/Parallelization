@@ -172,7 +172,6 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
 
      fread(arr_original, sizeof(unsigned char), (width * 3 + padding) * height, inputImage);
 
-#pragma omp parallel for collapse(2)
      for (int i = 0; i < height; i++)
      {
           for (int k = 0; k < width * 3; k += 3)
@@ -185,7 +184,6 @@ extern void blur_img(char mask[10], char path[80], int kernelSize)
           }
      }
 
-#pragma omp for
      for (int i = 0; i < width * height; i++)
      {
           blurredBlue[i] = matrixBlurring(originalBlue, width, height, kernelSize, i, padding);
