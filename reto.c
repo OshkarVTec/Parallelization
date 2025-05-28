@@ -234,10 +234,6 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
         printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
     }
 
-    for (int i = 0; i < IMAGE_COUNT; i++)
-    {
-        free(filenames[i]);
-    }
     free(filenames);
 }
 
