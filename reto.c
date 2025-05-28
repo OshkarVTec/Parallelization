@@ -16,7 +16,7 @@
 
 void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
 {
-    char *img_folder = "./img/";
+    char *img_folder = "./Parallelization/img/";
     char command[256];
     FILE *fp;
     FILE *operations_count;
@@ -280,6 +280,7 @@ int main(int argc, char **argv)
         do
         {
             printf("Enter the kernel size for blurring (55 to 150): ");
+            fflush(stdout);
             scanf("%d", &kernel_size);
             if (kernel_size < 55 || kernel_size > 155)
             {
