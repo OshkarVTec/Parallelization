@@ -73,7 +73,7 @@ class MainApp(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
         except subprocess.CalledProcessError as e:
-            self.ui.label_2.setText("Error, por favor revisa la carpeta")
+            self.ui.label_2.setText("Error")
             QMessageBox.critical(self, "Error al ejecutar el comando", e.stderr)
 
 
