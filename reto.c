@@ -14,9 +14,8 @@
 #include "reto_librerias.h"
 #include <stdint.h>
 
-void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
+void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_folder)
 {
-    char *img_folder = "./Parallelization/img/";
     char command[256];
     FILE *fp;
     FILE *operations_count;
@@ -275,19 +274,28 @@ int main(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
     int kernel_size;
+    char img_folder_path[256];
+
+    // Leer parámetros desde la terminal
     if (mpi_rank == 0)
     {
-        do
+        if (argc < 3)
         {
-            printf("Enter the kernel size for blurring (55 to 150): ");
-            fflush(stdout);
-            scanf("%d", &kernel_size);
-            if (kernel_size < 55 || kernel_size > 155)
-            {
-                printf("Invalid kernel size. Please enter a value between 55 and 150.\n");
-            }
-        } while (kernel_size < 55 || kernel_size > 150);
+            printf("Uso: mpirun -np <N> ./reto <ruta_img_folder> <kernel_size>\n");
+            printf("Ejemplo: mpirun -np 4 ./reto ./Parallelization/img/ 75\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+        strncpy(img_folder_path, argv[1], sizeof(img_folder_path));
+        img_folder_path[sizeof(img_folder_path) - 1] = '\0';
+        kernel_size = atoi(argv[2]);
+        if (kernel_size < 55 || kernel_size > 150)
+        {
+            printf("El kernel_size debe estar entre 55 y 150\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
     }
+    // Compartir parámetros con todos los procesos
+    MPI_Bcast(img_folder_path, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(&kernel_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     int optimal_threads = find_optimal_threads();
@@ -295,7 +303,7 @@ int main(int argc, char **argv)
         printf("Optimal number of threads: %d\n", optimal_threads);
     omp_set_num_threads(optimal_threads);
 
-    process_all_images(kernel_size, mpi_rank, mpi_size);
+    process_all_images(kernel_size, mpi_rank, mpi_size, img_folder_path);
 
     if (mpi_rank == 0)
     {
