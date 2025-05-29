@@ -24,23 +24,18 @@ class MainApp(QMainWindow):
         folder = QFileDialog.getExistingDirectory(
             self, "Selecciona una carpeta", exec_dir
         )
-        if folder and os.path.commonpath([exec_dir, folder]) == exec_dir:
+        if folder and os.path.abspath(folder).startswith(os.path.abspath(exec_dir)):
             self.ui.lineEdit_2.setText(folder)
         elif folder:
             QMessageBox.warning(
                 self,
                 "Error",
-                "Por favor selecciona una carpeta dentro del directorio de ejecución.",
+                "Por favor selecciona una carpeta dentro del directorio de ejecución o sus subdirectorios.",
             )
 
     def ejecutar_comando(self):
         carpeta = self.ui.lineEdit_2.text().strip()
         kernel_size_str = self.ui.lineEdit_kernel.text().strip()
-        if not carpeta or not os.path.isdir(carpeta):
-            QMessageBox.warning(
-                self, "Error", "Por favor selecciona una carpeta válida."
-            )
-            return
 
         try:
             kernel_size = int(kernel_size_str)
@@ -53,6 +48,7 @@ class MainApp(QMainWindow):
             return
 
         comando = f"{COMMAND} {carpeta} {kernel_size}"
+        print(f"Comando a ejecutar: {comando}")
         try:
             self.ui.label_2.setText("Ejecutando")
             resultado = subprocess.run(
