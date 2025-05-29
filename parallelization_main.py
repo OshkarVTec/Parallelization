@@ -6,7 +6,7 @@ from parallelization_ui import (
     Ui_MainWindow,
 )
 
-COMMAND = "touch test.txt"
+COMMAND = "mpiexec -n 3 --hostfile machinefile ./reto"
 
 
 class MainApp(QMainWindow):
@@ -20,9 +20,18 @@ class MainApp(QMainWindow):
         self.ui.pushButton.clicked.connect(self.ejecutar_comando)
 
     def seleccionar_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Selecciona una carpeta")
-        if folder:
+        base_dir = os.path.abspath(os.getcwd())  # o pon la ruta base que desees
+        folder = QFileDialog.getExistingDirectory(
+            self, "Selecciona una carpeta", base_dir
+        )
+        if folder and os.path.commonpath([base_dir, folder]) == base_dir:
             self.ui.lineEdit_2.setText(folder)
+        elif folder:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Solo puedes seleccionar carpetas dentro de:\n" + base_dir,
+            )
 
     def ejecutar_comando(self):
         carpeta = self.ui.lineEdit_2.text().strip()
