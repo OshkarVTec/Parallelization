@@ -14,130 +14,25 @@
 #include "reto_librerias.h"
 #include <stdint.h>
 
+#define NUM_IMAGES 100 // Ajusta según tu número real de imágenes
+
 void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
 {
     char *img_folder = "./Parallelization/img/";
     char command[256];
-    FILE *fp;
     FILE *operations_count;
-    char **filenames = NULL;
-    int IMAGE_COUNT = 0;
-
-    if (mpi_rank == 0)
-    {
-        // Obtener lista de archivos y contar el número de imágenes
-        snprintf(command, sizeof(command), "ls %s | wc -l", img_folder);
-        fp = popen(command, "r");
-        if (fp == NULL)
-        {
-            perror("Failed to count images");
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        }
-        if (fscanf(fp, "%d", &IMAGE_COUNT) != 1)
-        {
-            perror("Failed to read image count");
-            pclose(fp);
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        }
-        pclose(fp);
-
-        // Asignar memoria para los nombres de los archivos
-        filenames = malloc(IMAGE_COUNT * sizeof(char *));
-        if (filenames == NULL)
-        {
-            perror("Memory allocation failed for filenames");
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        }
-
-        // Obtener lista de archivos
-        snprintf(command, sizeof(command), "ls %s", img_folder);
-        fp = popen(command, "r");
-        if (fp == NULL)
-        {
-            perror("Failed to list images");
-            free(filenames);
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        }
-
-        // Leer nombres de archivos
-        char filename[128];
-        int i = 0;
-        while (fgets(filename, sizeof(filename), fp) != NULL && i < IMAGE_COUNT)
-        {
-            filename[strcspn(filename, "\n")] = '\0'; // quitar salto de línea
-            filenames[i++] = strdup(filename);        // duplicar el nombre
-        }
-        pclose(fp);
-    }
-
-    // Broadcast IMAGE_COUNT a todos los procesos
-    MPI_Bcast(&IMAGE_COUNT, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    // Distribuir nombres de archivos a todos los procesos
-    if (mpi_rank != 0)
-    {
-        filenames = malloc(IMAGE_COUNT * sizeof(char *));
-        for (int i = 0; i < IMAGE_COUNT; i++)
-        {
-            filenames[i] = malloc(128);
-        }
-    }
-    for (int i = 0; i < IMAGE_COUNT; i++)
-    {
-        if (mpi_rank == 0)
-        {
-            MPI_Bcast(filenames[i], 128, MPI_CHAR, 0, MPI_COMM_WORLD);
-        }
-        else
-        {
-            MPI_Bcast(filenames[i], 128, MPI_CHAR, 0, MPI_COMM_WORLD);
-        }
-    }
-
     double start_time = omp_get_wtime();
 
-    // Inicializar archivo (vacío) por proceso
-    char operations_filename[64];
-    snprintf(operations_filename, sizeof(operations_filename), "operations_count_rank%d.txt", mpi_rank);
-    operations_count = fopen(operations_filename, "w");
-    if (operations_count == NULL)
+    // Cada proceso calcula qué imágenes le tocan (round-robin)
+    for (int i = mpi_rank + 1; i <= NUM_IMAGES; i += mpi_size)
     {
-        perror("Failed to open operations_count.txt");
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
-    fclose(operations_count);
+        char filename[256];
+        snprintf(filename, sizeof(filename), "%simagen_%03d.bmp", img_folder, i);
 
-    // Procesar imágenes asignadas a este proceso
-#pragma omp parallel for schedule(dynamic)
-    for (int j = mpi_rank; j < IMAGE_COUNT; j += mpi_size)
-    {
-        char *filename = filenames[j];
-        char filepath[256];
-        snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);
-
-        // Crear nombres de salida
-        char filename_copy[128];
-        strncpy(filename_copy, filename, sizeof(filename_copy));
-        char *dot = strrchr(filename_copy, '.');
-        if (dot && strcmp(dot, ".bmp") == 0)
-        {
-            *dot = '\0';
-        }
-
-        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256];
-        char mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
-
-        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale.bmp", filename_copy);
-        snprintf(blur_output, sizeof(blur_output), "%s_blur.bmp", filename_copy);
-        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal.bmp", filename_copy);
-        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical.bmp", filename_copy);
-        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW.bmp", filename_copy);
-        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW.bmp", filename_copy);
-
-        FILE *file = fopen(filepath, "rb");
+        FILE *file = fopen(filename, "rb");
         if (!file)
         {
-            printf("Error abriendo el archivo BMP\n");
+            printf("[MPI %d] Error abriendo el archivo BMP %s\n", mpi_rank, filename);
             continue;
         }
 
@@ -147,12 +42,11 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
         fread(&file_header, sizeof(BITMAPFILEHEADER), 1, file);
         fread(&info_header, sizeof(BITMAPINFOHEADER), 1, file);
 
-        // Skip to pixel data
         fseek(file, file_header.bfOffBits, SEEK_SET);
 
         int width = info_header.biWidth;
         int height = info_header.biHeight;
-        int abs_height = abs(height); // to handle top-down bitmaps
+        int abs_height = abs(height);
         int row_padded = (width * 3 + 3) & (~3);
 
         unsigned char *row = malloc(row_padded);
@@ -160,8 +54,8 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
 
         if (info_header.biBitCount != 24 || info_header.biCompression != 0)
         {
-            printf("Unsupported BMP format: bit count = %d, compression = %u\n",
-                   info_header.biBitCount, info_header.biCompression);
+            printf("[MPI %d] Unsupported BMP format: bit count = %d, compression = %u\n",
+                   mpi_rank, info_header.biBitCount, info_header.biCompression);
             fclose(file);
             free(row);
             free(image);
@@ -170,25 +64,25 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
 
         if (!row || !image)
         {
-            printf("Memory allocation failed\n");
+            printf("[MPI %d] Memory allocation failed\n", mpi_rank);
             fclose(file);
             free(row);
             free(image);
             continue;
         }
 
-        for (int i = 0; i < abs_height; i++)
+        for (int j = 0; j < abs_height; j++)
         {
             if (fread(row, sizeof(unsigned char), row_padded, file) != row_padded)
             {
-                printf("Error reading row data\n");
+                printf("[MPI %d] Error reading row data\n", mpi_rank);
                 fclose(file);
                 free(row);
                 free(image);
                 continue;
             }
 
-            int row_index = (height > 0) ? (abs_height - 1 - i) : i;
+            int row_index = (height > 0) ? (abs_height - 1 - j) : j;
 
             for (int k = 0; k < width; k++)
             {
@@ -200,10 +94,27 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
         }
 
         free(row);
+        fclose(file);
 
-        int total_pixels_read = width * height * 3; // Total de píxeles leídos
+        int total_pixels_read = width * height * 3;
         int total_pixels_written = width * height * 3 * 6;
-        int padding = (4 - (width * sizeof(RGB)) % 4) % 4; // Calculate padding for BMP format
+        int padding = (4 - (width * sizeof(RGB)) % 4) % 4;
+
+        char filename_copy[128];
+        snprintf(filename_copy, sizeof(filename_copy), "imagen_%03d", i);
+
+        char greyscale_output[256], blur_output[256], mirror_horizontal_output[256];
+        char mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
+
+        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale.bmp", filename_copy);
+        snprintf(blur_output, sizeof(blur_output), "%s_blur.bmp", filename_copy);
+        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal.bmp", filename_copy);
+        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical.bmp", filename_copy);
+        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW.bmp", filename_copy);
+        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW.bmp", filename_copy);
+
+        char operations_filename[64];
+        snprintf(operations_filename, sizeof(operations_filename), "operations_count_rank%d.txt", mpi_rank);
 
 #pragma omp critical
         {
@@ -225,16 +136,16 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size)
         vertical_mirror_bw_img(image, width, height, padding, mirror_vertical_bw_output, file_header, info_header);
 
         free(image);
-        free(filenames[j]);
+
+        printf("[MPI %d] Procesada imagen %03d\n", mpi_rank, i);
     }
 
     double end_time = omp_get_wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
     if (mpi_rank == 0)
     {
         printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
     }
-
-    free(filenames);
 }
 
 int find_optimal_threads()
