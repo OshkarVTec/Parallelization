@@ -36,6 +36,20 @@ class Ui_MainWindow(object):
         self.pushButton_3 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
+
+        spacerItem = QtWidgets.QSpacerItem(
+            40,
+            20,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Minimum,
+        )
+        self.horizontalLayout.addItem(spacerItem)
+
+        self.lineEdit_kernel = QtWidgets.QLineEdit(parent=self.horizontalLayoutWidget)
+        self.lineEdit_kernel.setObjectName("lineEdit_kernel")
+        self.lineEdit_kernel.setPlaceholderText("Tamaño kernel (55-150)")
+        self.horizontalLayout.addWidget(self.lineEdit_kernel)
+
         self.label = QtWidgets.QLabel(parent=self.centralwidget)
         self.label.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignBottom

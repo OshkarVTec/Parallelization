@@ -6,7 +6,7 @@ from parallelization_ui import (
     Ui_MainWindow,
 )
 
-COMMAND = "mpiexec -n 3 --hostfile machinefile ./reto"
+COMMAND = "touch test.txt"
 
 
 class MainApp(QMainWindow):
@@ -20,28 +20,39 @@ class MainApp(QMainWindow):
         self.ui.pushButton.clicked.connect(self.ejecutar_comando)
 
     def seleccionar_folder(self):
-        base_dir = os.path.abspath(os.getcwd())  # o pon la ruta base que desees
+        exec_dir = os.getcwd()
         folder = QFileDialog.getExistingDirectory(
-            self, "Selecciona una carpeta", base_dir
+            self, "Selecciona una carpeta", exec_dir
         )
-        if folder and os.path.commonpath([base_dir, folder]) == base_dir:
+        if folder and os.path.commonpath([exec_dir, folder]) == exec_dir:
             self.ui.lineEdit_2.setText(folder)
         elif folder:
             QMessageBox.warning(
                 self,
                 "Error",
-                "Solo puedes seleccionar carpetas dentro de:\n" + base_dir,
+                "Por favor selecciona una carpeta dentro del directorio de ejecución.",
             )
 
     def ejecutar_comando(self):
         carpeta = self.ui.lineEdit_2.text().strip()
+        kernel_size_str = self.ui.lineEdit_kernel.text().strip()
         if not carpeta or not os.path.isdir(carpeta):
             QMessageBox.warning(
                 self, "Error", "Por favor selecciona una carpeta válida."
             )
             return
 
-        comando = COMMAND
+        try:
+            kernel_size = int(kernel_size_str)
+            if not (55 <= kernel_size <= 150):
+                raise ValueError
+        except ValueError:
+            QMessageBox.warning(
+                self, "Error", "Introduce un tamaño de kernel válido (55-150)."
+            )
+            return
+
+        comando = f"{COMMAND} {carpeta} {kernel_size}"
         try:
             self.ui.label_2.setText("Ejecutando")
             resultado = subprocess.run(
