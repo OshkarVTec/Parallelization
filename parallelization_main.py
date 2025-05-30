@@ -2,11 +2,35 @@ import sys
 import os
 import subprocess
 from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
+from PyQt6.QtCore import QThread, pyqtSignal
 from parallelization_ui import (
     Ui_MainWindow,
 )
 
-COMMAND = "touch test.txt"
+COMMAND = "mpiexec -np 3 --hostfile machinefile ./reto"
+
+
+class WorkerThread(QThread):
+    finished = pyqtSignal(str)
+    error = pyqtSignal(str)
+
+    def __init__(self, comando):
+        super().__init__()
+        self.comando = comando
+
+    def run(self):
+        try:
+            resultado = subprocess.run(
+                self.comando,
+                shell=True,
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.finished.emit(resultado.stdout)
+        except subprocess.CalledProcessError as e:
+            self.error.emit(e.stderr)
 
 
 class MainApp(QMainWindow):
@@ -34,7 +58,7 @@ class MainApp(QMainWindow):
             )
 
     def ejecutar_comando(self):
-        carpeta = self.ui.lineEdit_2.text().strip()
+        carpeta = self.ui.lineEdit_2.text().strip() + "/"
         kernel_size_str = self.ui.lineEdit_kernel.text().strip()
         if not carpeta or not os.path.isdir(carpeta):
             QMessageBox.warning(
@@ -53,28 +77,26 @@ class MainApp(QMainWindow):
             return
 
         comando = f"{COMMAND} {carpeta} {kernel_size}"
-        try:
-            self.ui.label_2.setText("Ejecutando")
-            resultado = subprocess.run(
-                comando,
-                shell=True,
-                check=True,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            salida = resultado.stdout
-            self.ui.label_2.setText("Terminado")
-            QMessageBox.information(
-                self,
-                "Terminado",
-                f"Ejecución terminada con éxito.",
-                QMessageBox.StandardButton.Ok,
-                QMessageBox.StandardButton.Ok,
-            )
-        except subprocess.CalledProcessError as e:
-            self.ui.label_2.setText("Error")
-            QMessageBox.critical(self, "Error al ejecutar el comando", e.stderr)
+        self.ui.label_2.setText("Ejecutando")
+        self.worker = WorkerThread(comando)
+        self.worker.finished.connect(self.comando_terminado)
+        self.worker.error.connect(self.comando_error)
+        self.worker.start()
+
+    def comando_terminado(self, salida):
+        print(salida)
+        self.ui.label_2.setText("Terminado")
+        QMessageBox.information(
+            self,
+            "Terminado",
+            f"Ejecución terminada con éxito.",
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
+        )
+
+    def comando_error(self, error):
+        self.ui.label_2.setText("Error")
+        QMessageBox.critical(self, "Error al ejecutar el comando", error)
 
 
 if __name__ == "__main__":
