@@ -7,7 +7,7 @@ from parallelization_ui import (
     Ui_MainWindow,
 )
 
-COMMAND = "mpiexec -np 3 --hostfile machinefile ./reto"
+COMMAND = "mpiexec -np 3 --hostfile mirror/Parallelization/machinefile mirror/Parallelization/reto"
 
 
 class WorkerThread(QThread):
