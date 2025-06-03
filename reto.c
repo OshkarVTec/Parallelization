@@ -122,6 +122,10 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
 #pragma omp parallel for schedule(dynamic)
     for (int j = mpi_rank; j < IMAGE_COUNT; j += mpi_size)
     {
+        if (mpi_rank == 0) {
+        printf("PROGRESS %d/%d\n", j + 1, IMAGE_COUNT);
+        fflush(stdout);
+}
         char *filename = filenames[j];
         char filepath[256];
         snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);

@@ -41,6 +41,12 @@ class Ui_MainWindow(object):
         self.label_output_folder.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label_output_folder.setObjectName("label_output_folder")
         self.label_output_folder.setText("")
+        self.progressBar = QtWidgets.QProgressBar(parent=self.centralwidget)
+        self.progressBar.setGeometry(QtCore.QRect(200, 470, 461, 23))
+        self.progressBar.setObjectName("progressBar")
+        self.progressBar.setMinimum(0)
+        self.progressBar.setMaximum(100)
+        self.progressBar.setValue(0)
 
         spacerItem = QtWidgets.QSpacerItem(
             40,

@@ -14,6 +14,7 @@ OUTPUT_FOLDER = "output"
 class WorkerThread(QThread):
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
+    progress = pyqtSignal(int)  # Nueva señal para progreso
 
     def __init__(self, comando):
         super().__init__()
@@ -21,17 +22,37 @@ class WorkerThread(QThread):
 
     def run(self):
         try:
-            resultado = subprocess.run(
+            process = subprocess.Popen(
                 self.comando,
                 shell=True,
-                check=True,
-                text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
             )
-            self.finished.emit(resultado.stdout)
-        except subprocess.CalledProcessError as e:
-            self.error.emit(e.stderr)
+            total = None
+            progreso = 0
+            salida = ""
+            for line in process.stdout:
+                salida += line
+                if line.startswith("PROGRESS"):
+                    # Ejemplo: PROGRESS 3/10
+                    try:
+                        _, nums = line.strip().split()
+                        done, total = map(int, nums.split("/"))
+                        progreso = int(done / total * 100)
+                        self.progress.emit(progreso)
+                    except Exception:
+                        pass
+            process.wait()
+            if process.returncode == 0:
+                self.finished.emit(salida)
+            else:
+                error = process.stderr.read()
+                self.error.emit(error)
+        except Exception as e:
+            self.error.emit(str(e))
 
 
 class MainApp(QMainWindow):
@@ -77,15 +98,18 @@ class MainApp(QMainWindow):
         self.worker = WorkerThread(comando)
         self.worker.finished.connect(self.comando_terminado)
         self.worker.error.connect(self.comando_error)
+        self.worker.progress.connect(
+            self.ui.progressBar.setValue
+        )  # Conecta progreso real
+        self.ui.progressBar.setValue(0)
         self.worker.start()
 
     def comando_terminado(self, salida):
         print(salida)
         self.ui.label_2.setText("Terminado")
         exec_dir = os.getcwd()
-        self.ui.label_output_folder.setText(
-            f"Archivos procesados en: {exec_dir + "/" + OUTPUT_FOLDER}"
-        )
+        folder = exec_dir + "/" + OUTPUT_FOLDER
+        self.ui.label_output_folder.setText(f"Archivos procesados en: {folder}")
         QMessageBox.information(
             self,
             "Terminado",
