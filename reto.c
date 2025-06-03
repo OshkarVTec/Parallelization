@@ -257,86 +257,87 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
 
         free(filenames);
     }
+}
 
-    int find_optimal_threads()
+int find_optimal_threads()
+{
+    int max_threads = 100;
+    int optimal_threads = 1;
+    double min_time = INFINITY;
+
+    for (int num_threads = 1; num_threads <= max_threads; num_threads += 2)
     {
-        int max_threads = 100;
-        int optimal_threads = 1;
-        double min_time = INFINITY;
+        omp_set_num_threads(num_threads);
 
-        for (int num_threads = 1; num_threads <= max_threads; num_threads += 2)
-        {
-            omp_set_num_threads(num_threads);
-
-            double start_time = omp_get_wtime();
+        double start_time = omp_get_wtime();
 
 #pragma omp parallel for
-            for (int i = 0; i < 1000000; i++)
-            {
-                double temp = sqrt(i) * sin(i); // Dummy computation
-            }
-
-            double end_time = omp_get_wtime();
-            double elapsed_time = end_time - start_time;
-            if (elapsed_time < min_time)
-            {
-                min_time = elapsed_time;
-                optimal_threads = num_threads;
-            }
+        for (int i = 0; i < 1000000; i++)
+        {
+            double temp = sqrt(i) * sin(i); // Dummy computation
         }
 
-        return optimal_threads;
+        double end_time = omp_get_wtime();
+        double elapsed_time = end_time - start_time;
+        if (elapsed_time < min_time)
+        {
+            min_time = elapsed_time;
+            optimal_threads = num_threads;
+        }
     }
 
-    int main(int argc, char **argv)
+    return optimal_threads;
+}
+
+int main(int argc, char **argv)
+{
+    int mpi_rank, mpi_size;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+    int kernel_size;
+    char img_folder_path[256];
+
+    // Leer parámetros desde la terminal
+    if (mpi_rank == 0)
     {
-        int mpi_rank, mpi_size;
-        MPI_Init(&argc, &argv);
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-
-        int kernel_size;
-        char img_folder_path[256];
-
-        // Leer parámetros desde la terminal
-        if (mpi_rank == 0)
+        if (argc < 3)
         {
-            if (argc < 3)
-            {
-                printf("Uso: mpirun -np <N> ./reto <ruta_img_folder> <kernel_size>\n");
-                printf("Ejemplo: mpirun -np 4 ./reto ./Parallelization/img/ 75\n");
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-            }
-            strncpy(img_folder_path, argv[1], sizeof(img_folder_path));
-            img_folder_path[sizeof(img_folder_path) - 1] = '\0';
-            kernel_size = atoi(argv[2]);
-            if (kernel_size < 55 || kernel_size > 150)
-            {
-                printf("El kernel_size debe estar entre 55 y 150\n");
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-            }
+            printf("Uso: mpirun -np <N> ./reto <ruta_img_folder> <kernel_size>\n");
+            printf("Ejemplo: mpirun -np 4 ./reto ./Parallelization/img/ 75\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        // Compartir parámetros con todos los procesos
-        MPI_Bcast(img_folder_path, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&kernel_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        int optimal_threads = find_optimal_threads();
-        if (mpi_rank == 0)
-            printf("Optimal number of threads: %d\n", optimal_threads);
-        omp_set_num_threads(optimal_threads);
-
-        process_all_images(kernel_size, mpi_rank, mpi_size, img_folder_path);
-
-        if (mpi_rank == 0)
+        strncpy(img_folder_path, argv[1], sizeof(img_folder_path));
+        img_folder_path[sizeof(img_folder_path) - 1] = '\0';
+        kernel_size = atoi(argv[2]);
+        if (kernel_size < 55 || kernel_size > 150)
         {
-#pragma omp parallel
-            {
-#pragma omp single
-                {
-                    printf("Number of threads used: %d\n", omp_get_num_threads());
-                }
-            }
+            printf("El kernel_size debe estar entre 55 y 150\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        MPI_Finalize();
-        return 0;
     }
+    // Compartir parámetros con todos los procesos
+    MPI_Bcast(img_folder_path, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kernel_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    int optimal_threads = find_optimal_threads();
+    if (mpi_rank == 0)
+        printf("Optimal number of threads: %d\n", optimal_threads);
+    omp_set_num_threads(optimal_threads);
+
+    process_all_images(kernel_size, mpi_rank, mpi_size, img_folder_path);
+
+    if (mpi_rank == 0)
+    {
+#pragma omp parallel
+        {
+#pragma omp single
+            {
+                printf("Number of threads used: %d\n", omp_get_num_threads());
+            }
+        }
+    }
+    MPI_Finalize();
+    return 0;
+}
