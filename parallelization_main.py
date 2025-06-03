@@ -6,6 +6,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from parallelization_ui import (
     Ui_MainWindow,
 )
+import time
 
 COMMAND = "mpiexec -np 3 --hostfile mirror/Parallelization/machinefile mirror/Parallelization/reto"
 
