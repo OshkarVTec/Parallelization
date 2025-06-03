@@ -99,9 +99,17 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
 
     double start_time = omp_get_wtime();
 
-    // Inicializar archivo (vacío) solo una vez por rank 0
     if (mpi_rank == 0)
     {
+        struct stat st = {0};
+        if (stat("out", &st) == -1)
+        {
+            if (mkdir("out", 0777) == -1)
+            {
+                perror("Failed to create out directory");
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            }
+        }
         FILE *operations_count = fopen("out/operations_count.txt", "w");
         if (operations_count == NULL)
         {
@@ -110,8 +118,6 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         }
         fclose(operations_count);
     }
-    MPI_Barrier(MPI_COMM_WORLD); // Asegura que el archivo esté creado antes de escribir
-
     // Procesar imágenes asignadas a este proceso
 #pragma omp parallel for schedule(dynamic)
     for (int j = mpi_rank; j < IMAGE_COUNT; j += mpi_size)
