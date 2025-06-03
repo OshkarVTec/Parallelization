@@ -9,8 +9,8 @@ from parallelization_ui import (
 )
 import time
 
-COMMAND = "mpiexec -np 3 --hostfile mirror/Parallelization/machinefile mirror/Parallelization/reto"
-OUTPUT_FOLDER = "output"
+COMMAND = "mpiexec -np 8 --hostfile mirror/Parallelization/machinefile mirror/Parallelization/reto"
+OUTPUT_FOLDER = "out"
 
 
 class WorkerThread(QThread):

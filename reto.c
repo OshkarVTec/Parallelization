@@ -24,15 +24,6 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
     char **filenames = NULL;
     int IMAGE_COUNT = 0;
 
-    // Crear carpeta output si no existe
-    if (mpi_rank == 0)
-    {
-        struct stat st = {0};
-        if (stat("output", &st) == -1)
-        {
-            mkdir("output", 0777);
-        }
-    }
     MPI_Barrier(MPI_COMM_WORLD); // Asegura que la carpeta exista antes de escribir
 
     if (mpi_rank == 0)
@@ -111,7 +102,7 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
     // Inicializar archivo (vacío) solo una vez por rank 0
     if (mpi_rank == 0)
     {
-        FILE *operations_count = fopen("output/operations_count.txt", "w");
+        FILE *operations_count = fopen("out/operations_count.txt", "w");
         if (operations_count == NULL)
         {
             perror("Failed to open operations_count.txt");
@@ -146,12 +137,12 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         char greyscale_output[256], blur_output[256], mirror_horizontal_output[256];
         char mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
 
-        snprintf(greyscale_output, sizeof(greyscale_output), "/output/%s_greyscale.bmp", filename_copy);
-        snprintf(blur_output, sizeof(blur_output), "/output/%s_blur.bmp", filename_copy);
-        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "/output/%s_mirrorHorizontal.bmp", filename_copy);
-        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "/output/%s_mirrorVertical.bmp", filename_copy);
-        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "/output/%s_mirrorVerticalBW.bmp", filename_copy);
-        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "/output/%s_mirrorHorizontalBW.bmp", filename_copy);
+        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale.bmp", filename_copy);
+        snprintf(blur_output, sizeof(blur_output), "%s_blur.bmp", filename_copy);
+        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal.bmp", filename_copy);
+        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical.bmp", filename_copy);
+        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW.bmp", filename_copy);
+        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW.bmp", filename_copy);
 
         FILE *file = fopen(filepath, "rb");
         if (!file)
@@ -226,7 +217,7 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
 
 #pragma omp critical
         {
-            FILE *operations_count = fopen("output/operations_count.txt", "a");
+            FILE *operations_count = fopen("out/operations_count.txt", "a");
             if (operations_count != NULL)
             {
                 fprintf(operations_count, "File: %s\n", filename_copy);
