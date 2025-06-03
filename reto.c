@@ -119,19 +119,11 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         fclose(operations_count);
     }
     // Procesar imágenes asignadas a este proceso
+    static int global_progress = 0;
 #pragma omp parallel for schedule(dynamic)
     for (int j = mpi_rank; j < IMAGE_COUNT; j += mpi_size)
     {
-        static int global_progress = 0;
-#pragma omp critical
-        {
-            global_progress++;
-            if (mpi_rank == 0)
-            {
-                printf("PROGRESS %d/%d\n", global_progress, IMAGE_COUNT);
-                fflush(stdout);
-            }
-        }
+
         char *filename = filenames[j];
         char filepath[256];
         snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);
@@ -244,6 +236,16 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         vertical_mirror_color_img(image, width, height, padding, mirror_vertical_output, file_header, info_header);
         horizontal_mirror_bw_img(image, width, height, padding, mirror_horizontal_bw_output, file_header, info_header);
         vertical_mirror_bw_img(image, width, height, padding, mirror_vertical_bw_output, file_header, info_header);
+
+#pragma omp critical
+        {
+            global_progress++;
+            if (mpi_rank == 0)
+            {
+                printf("PROGRESS %d/%d\n", global_progress, IMAGE_COUNT);
+                fflush(stdout);
+            }
+        }
 
         free(image);
         free(filenames[j]);
