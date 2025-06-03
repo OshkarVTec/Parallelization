@@ -24,10 +24,12 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
     char **filenames = NULL;
     int IMAGE_COUNT = 0;
 
-     // Crear carpeta output si no existe
-    if (mpi_rank == 0) {
+    // Crear carpeta output si no existe
+    if (mpi_rank == 0)
+    {
         struct stat st = {0};
-        if (stat("output", &st) == -1) {
+        if (stat("output", &st) == -1)
+        {
             mkdir("output", 0777);
         }
     }
@@ -107,9 +109,11 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
     double start_time = omp_get_wtime();
 
     // Inicializar archivo (vacío) solo una vez por rank 0
-    if (mpi_rank == 0) {
+    if (mpi_rank == 0)
+    {
         FILE *operations_count = fopen("output/operations_count.txt", "w");
-        if (operations_count == NULL) {
+        if (operations_count == NULL)
+        {
             perror("Failed to open operations_count.txt");
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
@@ -117,15 +121,15 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
     }
     MPI_Barrier(MPI_COMM_WORLD); // Asegura que el archivo esté creado antes de escribir
 
-
     // Procesar imágenes asignadas a este proceso
 #pragma omp parallel for schedule(dynamic)
     for (int j = mpi_rank; j < IMAGE_COUNT; j += mpi_size)
     {
-        if (mpi_rank == 0) {
-        printf("PROGRESS %d/%d\n", j + 1, IMAGE_COUNT);
-        fflush(stdout);
-}
+        if (mpi_rank == 0)
+        {
+            printf("PROGRESS %d/%d\n", j + 1, IMAGE_COUNT);
+            fflush(stdout);
+        }
         char *filename = filenames[j];
         char filepath[256];
         snprintf(filepath, sizeof(filepath), "%s%s", img_folder, filename);
@@ -142,12 +146,12 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         char greyscale_output[256], blur_output[256], mirror_horizontal_output[256];
         char mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
 
-        snprintf(greyscale_output, sizeof(greyscale_output), "output/%s_greyscale.bmp", filename_copy);
-        snprintf(blur_output, sizeof(blur_output), "output/%s_blur.bmp", filename_copy);
-        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "output/%s_mirrorHorizontal.bmp", filename_copy);
-        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "output/%s_mirrorVertical.bmp", filename_copy);
-        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "output/%s_mirrorVerticalBW.bmp", filename_copy);
-        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "output/%s_mirrorHorizontalBW.bmp", filename_copy);
+        snprintf(greyscale_output, sizeof(greyscale_output), "/output/%s_greyscale.bmp", filename_copy);
+        snprintf(blur_output, sizeof(blur_output), "/output/%s_blur.bmp", filename_copy);
+        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "/output/%s_mirrorHorizontal.bmp", filename_copy);
+        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "/output/%s_mirrorVertical.bmp", filename_copy);
+        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "/output/%s_mirrorVerticalBW.bmp", filename_copy);
+        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "/output/%s_mirrorHorizontalBW.bmp", filename_copy);
 
         FILE *file = fopen(filepath, "rb");
         if (!file)
