@@ -9,7 +9,7 @@ from parallelization_ui import (
 )
 import time
 
-COMMAND = "mpiexec -np 8 --hostfile mirror/Parallelization/machinefile mirror/Parallelization/reto"
+COMMAND = "mpiexec -np 8 --hostfile /mirror/Parallelization/machinefile /mirror/Parallelization/reto"
 OUTPUT_FOLDER = "out"
 
 
