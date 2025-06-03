@@ -36,6 +36,11 @@ class Ui_MainWindow(object):
         self.pushButton_3 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
+        self.label_output_folder = QtWidgets.QLabel(parent=self.centralwidget)
+        self.label_output_folder.setGeometry(QtCore.QRect(280, 530, 301, 19))
+        self.label_output_folder.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.label_output_folder.setObjectName("label_output_folder")
+        self.label_output_folder.setText("")
 
         spacerItem = QtWidgets.QSpacerItem(
             40,

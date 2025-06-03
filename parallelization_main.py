@@ -7,6 +7,7 @@ from parallelization_ui import (
 )
 
 COMMAND = "touch test.txt"
+OUTPUT_FOLDER = "output_folder"
 
 
 class MainApp(QMainWindow):
@@ -61,6 +62,10 @@ class MainApp(QMainWindow):
             )
             salida = resultado.stdout
             self.ui.label_2.setText("Terminado")
+            exec_dir = os.getcwd()
+            self.ui.label_output_folder.setText(
+                f"Archivos procesados en: {exec_dir + "/" + OUTPUT_FOLDER}"
+            )
             QMessageBox.information(
                 self,
                 "Terminado",
