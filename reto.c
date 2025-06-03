@@ -106,16 +106,17 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
 
     double start_time = omp_get_wtime();
 
-    // Inicializar archivo (vacío) por proceso
-    char operations_filename[64];
-    snprintf(operations_filename, sizeof(operations_filename), "operations_count_rank%d.txt", mpi_rank);
-    operations_count = fopen(operations_filename, "w");
-    if (operations_count == NULL)
-    {
-        perror("Failed to open operations_count.txt");
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    // Inicializar archivo (vacío) solo una vez por rank 0
+    if (mpi_rank == 0) {
+        FILE *operations_count = fopen("output/operations_count.txt", "w");
+        if (operations_count == NULL) {
+            perror("Failed to open operations_count.txt");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+        fclose(operations_count);
     }
-    fclose(operations_count);
+    MPI_Barrier(MPI_COMM_WORLD); // Asegura que el archivo esté creado antes de escribir
+
 
     // Procesar imágenes asignadas a este proceso
 #pragma omp parallel for schedule(dynamic)
@@ -217,7 +218,7 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
 
 #pragma omp critical
         {
-            operations_count = fopen(operations_filename, "a");
+            FILE *operations_count = fopen("output/operations_count.txt", "a");
             if (operations_count != NULL)
             {
                 fprintf(operations_count, "File: %s\n", filename_copy);
