@@ -61,6 +61,7 @@ class MainApp(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.start_time = None
 
         # Menú de equipo
         menubar = self.menuBar()
@@ -72,6 +73,7 @@ class MainApp(QMainWindow):
         # Conectar botones
         self.ui.pushButton_3.clicked.connect(self.seleccionar_folder)
         self.ui.pushButton.clicked.connect(self.ejecutar_comando)
+        self.ui.pushButton_show_ops.clicked.connect(self.mostrar_operations_count)
 
     def mostrar_equipo(self):
         miembros = [
@@ -103,6 +105,7 @@ class MainApp(QMainWindow):
     def ejecutar_comando(self):
         carpeta = self.ui.lineEdit_2.text().strip() + "/"
         kernel_size_str = self.ui.lineEdit_kernel.text().strip()
+        self.start_time = time.time()
 
         try:
             kernel_size = int(kernel_size_str)
@@ -131,6 +134,16 @@ class MainApp(QMainWindow):
         exec_dir = os.getcwd()
         folder = exec_dir + "/" + OUTPUT_FOLDER
         self.ui.label_output_folder.setText(f"Archivos procesados en: {folder}")
+
+        # Calcular velocidad de procesamiento
+        total_pixels = self.obtener_total_pixeles()
+        elapsed = time.time() - self.start_time if self.start_time else 1
+        if total_pixels > 0:
+            speed = total_pixels / elapsed
+            self.ui.label_speed.setText(f"Velocidad: {speed:.2f} pixeles/segundo")
+        else:
+            self.ui.label_speed.setText("Velocidad: N/A")
+
         QMessageBox.information(
             self,
             "Terminado",
@@ -139,9 +152,37 @@ class MainApp(QMainWindow):
             QMessageBox.StandardButton.Ok,
         )
 
+    def obtener_total_pixeles(self):
+        # Lee el archivo operations_count.txt y suma los pixeles leídos
+        try:
+            total_pixels_read = 0
+            total_pixels_written = 0
+            file_path = "output/operations_count.txt"
+            with open(file_path, "r") as file:
+                for line in file:
+                    if line.startswith("Total pixels read:"):
+                        total_pixels_read += int(line.split(":")[1].strip())
+                    elif line.startswith("Total pixels written:"):
+                        total_pixels_written += int(line.split(":")[1].strip())
+
+            # Calculate the total pixels processed
+            total_pixels_processed = total_pixels_read + total_pixels_written
+
+            return total_pixels_processed
+        except Exception:
+            return 0
+
     def comando_error(self, error):
         self.ui.label_2.setText("Error")
         QMessageBox.critical(self, "Error al ejecutar el comando", error)
+
+    def mostrar_operations_count(self):
+        try:
+            with open("output/operations_count.txt", "r") as f:
+                contenido = f.read()
+            self.ui.textEdit_ops.setPlainText(contenido)
+        except Exception as e:
+            self.ui.textEdit_ops.setPlainText(f"Error: {e}")
 
 
 if __name__ == "__main__":

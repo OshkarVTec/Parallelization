@@ -47,6 +47,21 @@ class Ui_MainWindow(object):
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(100)
         self.progressBar.setValue(0)
+        self.pushButton_show_ops = QtWidgets.QPushButton(parent=self.centralwidget)
+        self.pushButton_show_ops.setGeometry(QtCore.QRect(700, 530, 140, 30))
+        self.pushButton_show_ops.setObjectName("pushButton_show_ops")
+        self.pushButton_show_ops.setText("Ver operaciones")
+
+        self.textEdit_ops = QtWidgets.QTextEdit(parent=self.centralwidget)
+        self.textEdit_ops.setGeometry(QtCore.QRect(600, 350, 250, 150))
+        self.textEdit_ops.setObjectName("textEdit_ops")
+        self.textEdit_ops.setReadOnly(True)
+
+        self.label_speed = QtWidgets.QLabel(parent=self.centralwidget)
+        self.label_speed.setGeometry(QtCore.QRect(280, 560, 301, 19))
+        self.label_speed.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.label_speed.setObjectName("label_speed")
+        self.label_speed.setText("")
 
         spacerItem = QtWidgets.QSpacerItem(
             40,
