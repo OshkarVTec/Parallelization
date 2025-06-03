@@ -10,6 +10,8 @@
 #include <string.h>
 #include <omp.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <mpi.h>
 #include "reto_librerias.h"
 #include <stdint.h>
