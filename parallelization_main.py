@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
+from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QThread, pyqtSignal
 from parallelization_ui import (
     Ui_MainWindow,
@@ -61,9 +62,29 @@ class MainApp(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # Menú de equipo
+        menubar = self.menuBar()
+        acerca_menu = menubar.addMenu("Acerca de")
+        equipo_action = QAction("Equipo desarrollador", self)
+        equipo_action.triggered.connect(self.mostrar_equipo)
+        acerca_menu.addAction(equipo_action)
+
         # Conectar botones
         self.ui.pushButton_3.clicked.connect(self.seleccionar_folder)
         self.ui.pushButton.clicked.connect(self.ejecutar_comando)
+
+    def mostrar_equipo(self):
+        miembros = [
+            "Cruz Daniel Pérez Jiménez",
+            "David Alberto Alvarado Cabrero ",
+            "Oskar Adolfo Villa López",
+        ]
+        QMessageBox.information(
+            self,
+            "Equipo desarrollador",
+            "Integrantes:\n" + "\n".join(miembros),
+            QMessageBox.StandardButton.Ok,
+        )
 
     def seleccionar_folder(self):
         exec_dir = os.getcwd()
