@@ -7,7 +7,7 @@ from parallelization_ui import (
 )
 
 COMMAND = "touch test.txt"
-OUTPUT_FOLDER = "output_folder"
+OUTPUT_FOLDER = "output"
 
 
 class MainApp(QMainWindow):

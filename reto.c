@@ -22,6 +22,15 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
     char **filenames = NULL;
     int IMAGE_COUNT = 0;
 
+     // Crear carpeta output si no existe
+    if (mpi_rank == 0) {
+        struct stat st = {0};
+        if (stat("output", &st) == -1) {
+            mkdir("output", 0777);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD); // Asegura que la carpeta exista antes de escribir
+
     if (mpi_rank == 0)
     {
         // Obtener lista de archivos y contar el número de imágenes
@@ -126,12 +135,12 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         char greyscale_output[256], blur_output[256], mirror_horizontal_output[256];
         char mirror_vertical_output[256], mirror_vertical_bw_output[256], mirror_horizontal_bw_output[256];
 
-        snprintf(greyscale_output, sizeof(greyscale_output), "%s_greyscale.bmp", filename_copy);
-        snprintf(blur_output, sizeof(blur_output), "%s_blur.bmp", filename_copy);
-        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "%s_mirrorHorizontal.bmp", filename_copy);
-        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "%s_mirrorVertical.bmp", filename_copy);
-        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "%s_mirrorVerticalBW.bmp", filename_copy);
-        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "%s_mirrorHorizontalBW.bmp", filename_copy);
+        snprintf(greyscale_output, sizeof(greyscale_output), "output/%s_greyscale.bmp", filename_copy);
+        snprintf(blur_output, sizeof(blur_output), "output/%s_blur.bmp", filename_copy);
+        snprintf(mirror_horizontal_output, sizeof(mirror_horizontal_output), "output/%s_mirrorHorizontal.bmp", filename_copy);
+        snprintf(mirror_vertical_output, sizeof(mirror_vertical_output), "output/%s_mirrorVertical.bmp", filename_copy);
+        snprintf(mirror_vertical_bw_output, sizeof(mirror_vertical_bw_output), "output/%s_mirrorVerticalBW.bmp", filename_copy);
+        snprintf(mirror_horizontal_bw_output, sizeof(mirror_horizontal_bw_output), "output/%s_mirrorHorizontalBW.bmp", filename_copy);
 
         FILE *file = fopen(filepath, "rb");
         if (!file)
