@@ -311,7 +311,7 @@ int main(int argc, char **argv)
     MPI_Bcast(img_folder_path, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(&kernel_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    int optimal_threads = find_optimal_threads();
+    int optimal_threads = 10;
     if (mpi_rank == 0)
         printf("Optimal number of threads: %d\n", optimal_threads);
     omp_set_num_threads(optimal_threads);
