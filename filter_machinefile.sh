@@ -1,25 +1,30 @@
 #!/bin/bash
-# Uso: ./filter_machinefile.sh machinefile > machinefile_ok
+# Usage: ./filter_machinefile.sh machinefile > machinefile_ok
 
 inputfile="$1"
 if [ -z "$inputfile" ]; then
-    echo "Uso: $0 machinefile" >&2
+    echo "Usage: $0 machinefile" >&2
     exit 1
 fi
 
 first=1
 while IFS= read -r host || [ -n "$host" ]; do
-    # Ignora líneas vacías y comentarios
-    [[ -z "$host" || "$host" =~ ^# ]] && continue
+    # Ignore blank lines and comments
+    [[ -z "$host" ]] && continue
+    [[ "$host" =~ ^# ]] && continue
+
     if [ $first -eq 1 ]; then
-        # La primera máquina (master) siempre se incluye
         echo "$host"
         first=0
     else
-        # Si hay slots, quítalos solo para el chequeo SSH
+        # Extract hostname
         host_clean=$(echo "$host" | awk '{print $1}')
-        if ssh -o BatchMode=yes -o ConnectTimeout=2 "$host_clean" "echo OK" 2>/dev/null | grep -q OK; then
+        echo "Checking $host_clean..." >&2
+
+        if ssh -o BatchMode=yes -o ConnectTimeout=5 "$host_clean" "echo OK" >/dev/null 2>&1; then
             echo "$host"
+        else
+            echo "Skipping $host_clean (unreachable)" >&2
         fi
     fi
 done < "$inputfile"
