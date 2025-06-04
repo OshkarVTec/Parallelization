@@ -21,15 +21,23 @@ class WorkerThread(QThread):
     error = pyqtSignal(str)
     progress = pyqtSignal(int)  # Nueva señal para progreso
 
-    def __init__(self, comando, input_folder):
+    def __init__(self, input_folder, kernel_size_str):
         super().__init__()
-        self.comando = comando
         self.input_folder = input_folder
+        self.kernel_size_str = kernel_size_str
 
     def run(self):
         try:
+            subprocess.run(
+                ["bash", "filter_machinefile.sh", MACHINEFILE],
+                stdout=open(MACHINEFILE_OK, "w"),
+                check=True,
+            )
+            total_slots = self.contar_slots(MACHINEFILE_OK)
+
+            comando = f"mpiexec -np {total_slots} --hostfile {MACHINEFILE_OK} /mirror/Parallelization/reto {self.input_folder} {self.kernel_size_str}"
             process = subprocess.Popen(
-                self.comando,
+                comando,
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -152,16 +160,9 @@ class MainApp(QMainWindow):
                 self, "Error", "Introduce un tamaño de kernel válido (55-150)."
             )
             return
-        subprocess.run(
-            ["bash", "filter_machinefile.sh", MACHINEFILE],
-            stdout=open(MACHINEFILE_OK, "w"),
-            check=True,
-        )
-        total_slots = self.contar_slots(MACHINEFILE_OK)
 
-        comando = f"mpiexec -np {total_slots} --hostfile {MACHINEFILE_OK} /mirror/Parallelization/reto {carpeta} {kernel_size_str}"
         self.ui.label_2.setText("Ejecutando")
-        self.worker = WorkerThread(comando, carpeta)
+        self.worker = WorkerThread(carpeta, kernel_size_str)
         self.worker.finished.connect(self.comando_terminado)
         self.worker.error.connect(self.comando_error)
         self.worker.progress.connect(
