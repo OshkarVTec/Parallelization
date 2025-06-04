@@ -42,27 +42,22 @@ class WorkerThread(QThread):
                 except Exception:
                     pass
             salida = ""
-            total_outputs = None
+            done_count = 0
+            total_imgs = None
             while True:
                 line = process.stdout.readline()
                 if not line and process.poll() is not None:
                     break
                 if line:
                     salida += line
-
-                # Cuenta archivos de salida generados
-                outputs = glob.glob("out/*.bmp")
-                num_outputs = len(outputs)
-
-                # Calcula el total esperado solo una vez
-                if total_outputs is None:
-                    input_folder = self.comando.split()[2]
-                    num_imgs = len(glob.glob(f"{input_folder}/*.bmp"))
-                    total_outputs = num_imgs * 6 if num_imgs > 0 else 1
-
-                progreso = int(num_outputs / total_outputs * 100)
-                self.progress.emit(progreso)
-                time.sleep(0.1)  # Para evitar sobrecargar el CPU
+                    if line.startswith("DONE"):
+                        done_count += 1
+                        if total_imgs is None:
+                            input_folder = self.comando.split()[2]
+                            total_imgs = len(glob.glob(f"{input_folder}/*.bmp"))
+                        progreso = int(done_count / total_imgs * 100)
+                        self.progress.emit(progreso)
+                time.sleep(0.05)
 
             process.wait()
             if process.returncode == 0:
