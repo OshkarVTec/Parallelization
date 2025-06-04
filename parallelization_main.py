@@ -46,7 +46,7 @@ class WorkerThread(QThread):
                 salida += line
 
                 # Cuenta archivos de salida generados
-                outputs = glob.glob("out/*.bmp")
+                outputs = glob.glob(".out/*.bmp")
                 num_outputs = len(outputs)
 
                 # Calcula el total esperado solo una vez
