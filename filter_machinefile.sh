@@ -8,18 +8,18 @@ if [ -z "$inputfile" ]; then
 fi
 
 first=1
-while read -r host; do
+while IFS= read -r host || [ -n "$host" ]; do
     # Ignora líneas vacías y comentarios
     [[ -z "$host" || "$host" =~ ^# ]] && continue
     if [ $first -eq 1 ]; then
         # La primera máquina (master) siempre se incluye
         echo "$host"
         first=0
-        continue
-    fi
-    # Si hay slots, quítalos solo para el chequeo SSH
-    host_clean=$(echo "$host" | awk '{print $1}')
-    if ssh -o BatchMode=yes -o ConnectTimeout=2 "$host_clean" "echo OK" 2>/dev/null | grep -q OK; then
-        echo "$host"
+    else
+        # Si hay slots, quítalos solo para el chequeo SSH
+        host_clean=$(echo "$host" | awk '{print $1}')
+        if ssh -o BatchMode=yes -o ConnectTimeout=2 "$host_clean" "echo OK" 2>/dev/null | grep -q OK; then
+            echo "$host"
+        fi
     fi
 done < "$inputfile"
