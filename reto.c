@@ -235,7 +235,7 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         vertical_mirror_color_img(image, width, height, padding, mirror_vertical_output, file_header, info_header);
         horizontal_mirror_bw_img(image, width, height, padding, mirror_horizontal_bw_output, file_header, info_header);
         vertical_mirror_bw_img(image, width, height, padding, mirror_vertical_bw_output, file_header, info_header);
-
+        free(image);
         printf("DONE %s\n", filename_copy);
         fflush(stdout);
     }
