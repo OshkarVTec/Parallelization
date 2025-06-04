@@ -66,6 +66,7 @@ class WorkerThread(QThread):
 
             process.wait()
             if process.returncode == 0:
+                self.progress.emit(100)
                 self.finished.emit(salida)
             else:
                 error = process.stderr.read()
@@ -175,7 +176,7 @@ class MainApp(QMainWindow):
         try:
             total_pixels_read = 0
             total_pixels_written = 0
-            file_path = "output/operations_count.txt"
+            file_path = "out/operations_count.txt"
             with open(file_path, "r") as file:
                 for line in file:
                     if line.startswith("Total pixels read:"):
@@ -196,7 +197,7 @@ class MainApp(QMainWindow):
 
     def mostrar_operations_count(self):
         try:
-            with open("output/operations_count.txt", "r") as f:
+            with open("out/operations_count.txt", "r") as f:
                 contenido = f.read()
             self.ui.textEdit_ops.setPlainText(contenido)
         except Exception as e:
