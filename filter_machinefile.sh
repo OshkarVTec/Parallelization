@@ -3,19 +3,23 @@
 
 inputfile="$1"
 if [ -z "$inputfile" ]; then
-    echo "Uso: $0 machinefile"
+    echo "Uso: $0 machinefile" >&2
     exit 1
 fi
 
+first=1
 while read -r host; do
     # Ignora líneas vacías y comentarios
     [[ -z "$host" || "$host" =~ ^# ]] && continue
-    # Si hay slots, quítalos (ej: nodo1 slots=4 -> nodo1)
+    if [ $first -eq 1 ]; then
+        # La primera máquina (master) siempre se incluye
+        echo "$host"
+        first=0
+        continue
+    fi
+    # Si hay slots, quítalos solo para el chequeo SSH
     host_clean=$(echo "$host" | awk '{print $1}')
-    echo -n "Probing $host_clean... "
     if ssh -o BatchMode=yes -o ConnectTimeout=2 "$host_clean" "echo OK" 2>/dev/null | grep -q OK; then
         echo "$host"
-    else
-        echo "DOWN"
     fi
 done < "$inputfile"
