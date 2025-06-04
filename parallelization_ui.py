@@ -37,11 +37,16 @@ class Ui_MainWindow(object):
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
         self.label_output_folder = QtWidgets.QLabel(parent=self.centralwidget)
-        self.label_output_folder.setGeometry(QtCore.QRect(280, 530, 301, 19))
+        self.label_output_folder.setGeometry(
+            QtCore.QRect(180, 530, 501, 40)
+        )  # Aumenta el ancho y alto
         self.label_output_folder.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label_output_folder.setObjectName("label_output_folder")
         self.label_output_folder.setWordWrap(True)
         self.label_output_folder.setText("")
+        self.label_output_folder.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         self.progressBar = QtWidgets.QProgressBar(parent=self.centralwidget)
         self.progressBar.setGeometry(QtCore.QRect(200, 470, 461, 23))
         self.progressBar.setObjectName("progressBar")
