@@ -122,6 +122,22 @@ class MainApp(QMainWindow):
                 "Por favor selecciona una carpeta dentro del directorio de ejecución o sus subdirectorios.",
             )
 
+    def contar_slots(self, machinefile_path):
+        slots = 0
+        with open(machinefile_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "slots=" in line:
+                    try:
+                        slots += int(line.split("slots=")[1].split()[0])
+                    except Exception:
+                        slots += 1
+                else:
+                    slots += 1
+        return slots
+
     def ejecutar_comando(self):
         carpeta = self.ui.lineEdit_2.text().strip() + "/"
         kernel_size_str = self.ui.lineEdit_kernel.text().strip()
@@ -141,7 +157,9 @@ class MainApp(QMainWindow):
             stdout=open(MACHINEFILE_OK, "w"),
             check=True,
         )
-        comando = f"mpiexec -np 8 --hostfile {MACHINEFILE_OK} /mirror/Parallelization/reto {carpeta} {kernel_size_str}"
+        total_slots = self.contar_slots(MACHINEFILE_OK)
+
+        comando = f"mpiexec -np {total_slots} --hostfile {MACHINEFILE_OK} /mirror/Parallelization/reto {carpeta} {kernel_size_str}"
         self.ui.label_2.setText("Ejecutando")
         self.worker = WorkerThread(comando, carpeta)
         self.worker.finished.connect(self.comando_terminado)
