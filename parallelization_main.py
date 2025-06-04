@@ -20,9 +20,10 @@ class WorkerThread(QThread):
     error = pyqtSignal(str)
     progress = pyqtSignal(int)  # Nueva señal para progreso
 
-    def __init__(self, comando):
+    def __init__(self, comando, input_folder):
         super().__init__()
         self.comando = comando
+        self.input_folder = input_folder
 
     def run(self):
         try:
@@ -53,8 +54,12 @@ class WorkerThread(QThread):
                     if line.startswith("DONE"):
                         done_count += 1
                         if total_imgs is None:
-                            input_folder = self.comando.split()[2]
-                            total_imgs = len(glob.glob(f"{input_folder}/*.bmp"))
+                            total_imgs = len(glob.glob(f"{self.input_folder}*.bmp"))
+                            if total_imgs == 0:
+                                self.error.emit(
+                                    "No se encontraron imágenes en la carpeta."
+                                )
+                                return
                         progreso = int(done_count / total_imgs * 100)
                         self.progress.emit(progreso)
                 time.sleep(0.05)
@@ -132,7 +137,7 @@ class MainApp(QMainWindow):
 
         comando = f"{COMMAND} {carpeta} {kernel_size}"
         self.ui.label_2.setText("Ejecutando")
-        self.worker = WorkerThread(comando)
+        self.worker = WorkerThread(comando, carpeta)
         self.worker.finished.connect(self.comando_terminado)
         self.worker.error.connect(self.comando_error)
         self.worker.progress.connect(
