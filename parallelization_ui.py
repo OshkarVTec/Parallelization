@@ -40,6 +40,7 @@ class Ui_MainWindow(object):
         self.label_output_folder.setGeometry(QtCore.QRect(280, 530, 301, 19))
         self.label_output_folder.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label_output_folder.setObjectName("label_output_folder")
+        self.label_output_folder.setWordWrap(True)
         self.label_output_folder.setText("")
         self.progressBar = QtWidgets.QProgressBar(parent=self.centralwidget)
         self.progressBar.setGeometry(QtCore.QRect(200, 470, 461, 23))
