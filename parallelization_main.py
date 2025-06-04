@@ -8,6 +8,8 @@ from parallelization_ui import (
     Ui_MainWindow,
 )
 import time
+import glob
+
 
 COMMAND = "mpiexec -np 8 --hostfile /mirror/Parallelization/machinefile /mirror/Parallelization/reto"
 OUTPUT_FOLDER = "out"
@@ -36,17 +38,26 @@ class WorkerThread(QThread):
             total = None
             progreso = 0
             salida = ""
-            for line in process.stdout:
+            total_outputs = None
+            while True:
+                line = process.stdout.readline()
+                if not line:
+                    break
                 salida += line
-                if line.startswith("PROGRESS"):
-                    # Ejemplo: PROGRESS 3/10
-                    try:
-                        _, nums = line.strip().split()
-                        done, total = map(int, nums.split("/"))
-                        progreso = int(done / total * 100)
-                        self.progress.emit(progreso)
-                    except Exception:
-                        pass
+
+                # Cuenta archivos de salida generados
+                outputs = glob.glob("out/*.bmp")
+                num_outputs = len(outputs)
+
+                # Calcula el total esperado solo una vez
+                if total_outputs is None:
+                    # Cuenta imágenes originales
+                    input_folder = self.comando.split()[2]
+                    num_imgs = len(glob.glob(f"{input_folder}/*.bmp"))
+                    total_outputs = num_imgs * 6 if num_imgs > 0 else 1
+
+                progreso = int(num_outputs / total_outputs * 100)
+                self.progress.emit(progreso)
             process.wait()
             if process.returncode == 0:
                 self.finished.emit(salida)
