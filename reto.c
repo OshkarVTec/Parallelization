@@ -119,7 +119,6 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         fclose(operations_count);
     }
     // Procesar imágenes asignadas a este proceso
-    int local_progress = 0;
 #pragma omp parallel for schedule(dynamic)
     for (int j = mpi_rank; j < IMAGE_COUNT; j += mpi_size)
     {
@@ -236,8 +235,6 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         vertical_mirror_color_img(image, width, height, padding, mirror_vertical_output, file_header, info_header);
         horizontal_mirror_bw_img(image, width, height, padding, mirror_horizontal_bw_output, file_header, info_header);
         vertical_mirror_bw_img(image, width, height, padding, mirror_vertical_bw_output, file_header, info_header);
-        free(image);
-        fclose(file);
     }
 
     double end_time = omp_get_wtime();
