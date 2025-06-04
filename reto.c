@@ -248,15 +248,15 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
                 fflush(stdout);
             }
         }
-
-        double end_time = omp_get_wtime();
-        if (mpi_rank == 0)
-        {
-            printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
-        }
-
-        free(filenames);
     }
+
+    double end_time = omp_get_wtime();
+    if (mpi_rank == 0)
+    {
+        printf("Total execution time for processing all images: %.2f seconds\n", end_time - start_time);
+    }
+
+    free(filenames);
 }
 
 int find_optimal_threads()
