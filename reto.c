@@ -236,18 +236,8 @@ void process_all_images(int kernel_size, int mpi_rank, int mpi_size, char *img_f
         vertical_mirror_color_img(image, width, height, padding, mirror_vertical_output, file_header, info_header);
         horizontal_mirror_bw_img(image, width, height, padding, mirror_horizontal_bw_output, file_header, info_header);
         vertical_mirror_bw_img(image, width, height, padding, mirror_vertical_bw_output, file_header, info_header);
-
-#pragma omp critical
-        {
-            local_progress++;
-            int global_progress = 0;
-            MPI_Allreduce(&local_progress, &global_progress, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-            if (mpi_rank == 0)
-            {
-                printf("PROGRESS %d/%d\n", global_progress, IMAGE_COUNT);
-                fflush(stdout);
-            }
-        }
+        free(image);
+        fclose(file);
     }
 
     double end_time = omp_get_wtime();
