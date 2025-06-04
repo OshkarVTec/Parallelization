@@ -11,8 +11,9 @@ import time
 import glob
 
 
-COMMAND = "mpiexec -np 8 --hostfile /mirror/Parallelization/machinefile /mirror/Parallelization/reto"
 OUTPUT_FOLDER = "out"
+MACHINEFILE = "/mirror/Parallelization/machinefile"
+MACHINEFILE_OK = "/mirror/Parallelization/machinefile_ok"
 
 
 class WorkerThread(QThread):
@@ -135,8 +136,12 @@ class MainApp(QMainWindow):
                 self, "Error", "Introduce un tamaño de kernel válido (55-150)."
             )
             return
-
-        comando = f"{COMMAND} {carpeta} {kernel_size}"
+        subprocess.run(
+            ["bash", "filter_machinefile.sh", MACHINEFILE],
+            stdout=open(MACHINEFILE_OK, "w"),
+            check=True,
+        )
+        comando = f"mpiexec -np 8 --hostfile {MACHINEFILE_OK} /mirror/Parallelization/reto {carpeta} {kernel_size_str}"
         self.ui.label_2.setText("Ejecutando")
         self.worker = WorkerThread(comando, carpeta)
         self.worker.finished.connect(self.comando_terminado)
